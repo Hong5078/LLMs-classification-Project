@@ -1,0 +1,32 @@
+# Dataset (download from Mendeley Data, see README) and derived row-level files
+data/
+TXD-22*/
+*.zip
+
+# Model checkpoints
+checkpoints/
+*.pt
+*.pth
+
+# Environment and caches
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Course hand-out and working notes that are not part of the submission
+Midterm project-1-1.pdf
+assignment.pdf
+Prompt.md
+.claude/
+
+# LaTeX build files
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.bbl
+report/*.blg
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz

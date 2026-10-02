@@ -1,0 +1,8 @@
+# Python 3.10. For a CUDA build of PyTorch install it first from the PyTorch index, e.g.
+#   pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+torch==2.5.1
+numpy==2.2.6
+pandas==2.3.3
+scikit-learn==1.7.2
+matplotlib==3.10.9
+PyYAML==6.0.3

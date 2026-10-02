@@ -1,0 +1,68 @@
+# Single source of truth for every experiment. Values chosen on the validation
+# split by src/exp_rq1.py are written to results/rq1/best_config.json and
+# override the cnn/lstm blocks below in later experiments.
+
+seed: 42
+seeds_rq1: [42, 43, 44]
+
+# The six LLM families used (label values in the TXD-22 "Source" column).
+models: [ChatGPT, Gemini, Claude, Llama, DeepSeek, Qwen]
+
+data:
+  raw_globs: ["data/raw/*.csv", "TXD-22*/*.csv"]
+  subset_path: data/processed/subset.csv
+  splits_path: results/splits.csv
+
+split:
+  n_folds: 20        # 14 folds train (70%), 3 folds val (15%), 3 folds test (15%)
+  val_folds: 3
+  test_folds: 3
+
+tokenizer:
+  max_vocab: 30000
+  min_freq: 2
+
+lengths:
+  output: 512        # max response tokens; checked against the length distribution
+  input: 32          # max prompt tokens for the input-only condition
+  prompt_in_concat: 128
+
+train:
+  batch_size: 64
+  lr: 1.0e-3
+  weight_decay: 0.01
+  max_epochs: 15
+  patience: 3
+  grad_clip: 1.0     # applied to the LSTM only
+
+cnn:
+  emb_dim: 200
+  kernel_sizes: [3, 4, 5]
+  n_filters: 256
+  dropout: 0.5
+
+lstm:
+  emb_dim: 200
+  hidden: 256
+  layers: 1
+  dropout: 0.5
+
+# Small validation-only grids (seed 42, output-only).
+tuning:
+  cnn:
+    n_filters: [128, 256]
+    dropout: [0.3, 0.5]
+  lstm:
+    hidden: [128, 256]
+    layers: [1, 2]
+
+baseline:
+  word_ngram: [1, 2]
+  char_ngram: [2, 5]
+  max_features: 200000
+  C_grid: [1.0, 10.0, 100.0]
+
+budget_hours: 2.0
+
+ablation:
+  truncate_tokens: [64, 128]
