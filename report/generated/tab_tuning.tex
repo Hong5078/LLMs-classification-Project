@@ -1,0 +1,15 @@
+\begin{tabular}{llrrrrrc}
+\toprule
+Model & Configuration & Parameters & Val acc. & Val F1 & Best epoch & s/epoch & Chosen \\
+\midrule
+CNN & 128 filters, dropout 0.3 & 6,310,894 & 86.6 & 86.5 & 11 & 2.5 &  \\
+CNN & 128 filters, dropout 0.5 & 6,310,894 & 84.8 & 84.7 & 11 & 2.4 &  \\
+CNN & 256 filters, dropout 0.3 & 6,620,782 & 87.3 & 87.3 & 6 & 3.5 & \checkmark \\
+CNN & 256 filters, dropout 0.5 & 6,620,782 & 86.6 & 86.6 & 6 & 3.3 &  \\
+\midrule
+BiLSTM & hidden 128, 1 layer & 6,341,998 & 80.9 & 80.6 & 12 & 13.4 &  \\
+BiLSTM & hidden 128, 2 layers & 6,737,262 & 79.1 & 78.9 & 5 & 22.9 &  \\
+BiLSTM & hidden 256, 1 layer & 6,945,134 & 82.2 & 82.2 & 5 & 15.9 &  \\
+BiLSTM & hidden 256, 2 layers & 8,522,094 & 84.3 & 84.0 & 7 & 25.8 & \checkmark \\
+\bottomrule
+\end{tabular}

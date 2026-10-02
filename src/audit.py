@@ -9,6 +9,7 @@ import pandas as pd
 
 from .config import RESULTS, load_config, write_json
 from .data import load_subset
+from .features import WORD_RE
 from .tokenizer import tokenize
 
 OUT = RESULTS / "audit"
@@ -69,7 +70,7 @@ def main():
 
     # ---- lengths -------------------------------------------------------------------------
     df["n_chars"] = df["response"].str.len()
-    df["n_words"] = df["response"].str.split().str.len()
+    df["n_words"] = df["response"].map(lambda t: len(WORD_RE.findall(t)))   # same definition as the RQ4 features
     df["n_tokens"] = df["response"].map(lambda t: len(tokenize(t)))
     df["prompt_tokens"] = df["prompt"].map(lambda t: len(tokenize(t)))
     df[["row_id", "model", "split", "n_chars", "n_words", "n_tokens"]].to_csv(OUT / "lengths_per_row.csv", index=False)

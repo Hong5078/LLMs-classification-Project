@@ -32,6 +32,7 @@ def run_baseline(name, out_dir, cfg, data, class_names, extra_eval=None, tune_C=
     out_path = Path(out_dir) / f"{name}.json"
     if out_path.exists() and not force:
         return read_json(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
 
     bc = cfg["baseline"]
     start = time.time()

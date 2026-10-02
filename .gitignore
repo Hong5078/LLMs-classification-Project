@@ -20,7 +20,11 @@ assignment.pdf
 Prompt.md
 .claude/
 
+# Run logs
+results/log_*.txt
+
 # LaTeX build files
+report/build.log
 report/*.aux
 report/*.log
 report/*.out

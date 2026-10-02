@@ -44,7 +44,7 @@ committed in `results/splits.csv`, keyed by the row number in the original CSV.
 
 ## Setup
 
-Python 3.10. A CUDA GPU is optional but recommended (all experiments took about an hour on a laptop RTX 4060).
+Python 3.10. A CUDA GPU is optional but recommended (all training runs took about two hours on a laptop RTX 4060).
 
 ```bash
 python -m venv .venv
@@ -58,7 +58,8 @@ Compiling the report needs a LaTeX distribution with `pdflatex`.
 ## Reproducing everything
 
 ```bash
-bash run_all.sh
+bash run_all.sh                                   # uses `python` on the PATH
+PYTHON=.venv/Scripts/python.exe bash run_all.sh   # or name the interpreter (Windows venv shown)
 ```
 
 This runs the steps below in order. Each step can also be run on its own with `python -m <module>`.
@@ -84,19 +85,23 @@ Finished training runs are cached as JSON in `results/`; delete a file (or the w
 | Report item | Source file(s) in `results/` | Drawn or formatted by |
 |---|---|---|
 | Table 1 (dataset) | `audit/cleaning_log.json`, `audit/length_stats.csv` | `make_tables.dataset_tables` |
-| Table 2 (audit) | `audit/self_identification.csv`, `audit/typography_rates.csv` | `make_tables.dataset_tables` |
-| Table 3 (tuning) | `tuning/tuning_summary.csv`, `rq1/best_config.json` | `make_tables.training_tables` |
+| Table 2 (audit of shortcuts) | `audit/self_identification.csv`, `audit/typography_rates.csv` | `make_tables.dataset_tables` |
+| Table 3 (tuning grid) | `tuning/tuning_summary.csv`, `rq1/best_config.json` | `make_tables.training_tables` |
 | Table 4 (RQ1) | `rq1/summary.csv`, `rq1/baseline_output.json` | `make_tables.rq1_tables` |
-| Table 5 (RQ2) | `rq2/summary.csv` | `make_tables.rq2_tables` |
-| Tables 6-7 (RQ3) | `audit/qtype_counts.csv`, `rq3/transfer.csv` | `make_tables.rq3_tables` |
-| Tables 8-10 (RQ4) | `rq4/feature_groups.csv`, `rq4/distinctive_ngrams.csv`, `rq4/ablations.csv` | `make_tables.rq4_tables` |
-| Table 11 (errors) | `rq1/error_examples.csv` | `make_tables.rq1_tables` |
-| Figure 1 (lengths) | `audit/lengths_per_row.csv` | `make_figures.fig_lengths` |
+| Table 5 (RQ2) | `rq2/summary.csv`, `rq2/input_only_breakdown.json` | `make_tables.rq2_tables` |
+| Table 6 (question types) | `audit/qtype_counts.csv`, `audit/qtype_prompts_per_split.csv` | `make_tables.dataset_tables` |
+| Tables 7-8 (RQ3) | `rq3/transfer.csv`, `rq3/runs.csv` | `make_tables.rq3_tables` |
+| Table 9 (feature groups) | `rq4/feature_groups.csv`, `rq4/feature_classifier.json` | `make_tables.rq4_tables` |
+| Table 10 (n-grams, closing phrases) | `rq4/distinctive_ngrams.csv`, `rq4/closing_phrases.csv` | `make_tables.rq4_tables` |
+| Table 11 (ablations) | `rq4/ablations.csv` | `make_tables.rq4_tables` |
+| Table 12 (error examples) | `rq1/error_examples.csv`, `rq1/error_stats.json` | `make_tables.rq1_tables` |
+| Figure 1 (response lengths) | `audit/lengths_per_row.csv` | `make_figures.fig_lengths` |
 | Figure 2 (training curves) | `rq1/cnn_seed42.json`, `rq1/lstm_seed42.json` | `make_figures.fig_training_curves` |
-| Figure 3 (confusion matrices) | `rq1/*_mean_confusion.json` | `make_figures.fig_confusion` |
-| Figure 4 (RQ3) | `rq3/transfer.csv` | `make_figures.fig_rq3` |
-| Figure 5 (feature profiles) | `rq4/feature_means.csv` | `make_figures.fig_feature_profiles` |
-| Figure 6 (ablations) | `rq4/ablations.csv` | `make_figures.fig_ablations` |
+| Figure 3 (confusion matrices) | `rq1/cnn_mean_confusion.json`, `rq1/lstm_mean_confusion.json` | `make_figures.fig_confusion` |
+| Figure 4 (stylometric profiles) | `rq4/feature_means.csv` | `make_figures.fig_feature_profiles` |
+
+`figures/` also contains four figures that are not in the report: `rq2_conditions`, `rq3_transfer`,
+`rq4_feature_importance` and `rq4_ablations`. They show the same numbers as Tables 5, 7-8, 9 and 11.
 
 Every number in the report text is a LaTeX macro defined in `report/generated/numbers.tex`, which
 `src.make_tables` writes from the result files. No number is typed by hand.
@@ -115,6 +120,6 @@ run_all.sh             one command that reproduces everything
 
 ## Use of AI tools
 
-An LLM coding assistant (Claude) was used to help write and debug the code and to draft the report, as the
-project description allows. All experiments were run locally and every reported number comes from the saved
+An LLM coding assistant (Claude) was used to write and debug the code and to draft the report, under the
+author's direction, as the project description allows. All experiments were run locally and every reported number comes from the saved
 result files in `results/`.

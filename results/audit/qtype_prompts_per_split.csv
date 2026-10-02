@@ -1,0 +1,5 @@
+qtype,test,train,val
+definitional,330,1433,330
+explanatory,98,580,108
+mixed,21,79,11
+other,1,8,1

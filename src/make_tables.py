@@ -18,7 +18,8 @@ LATEX_CHARS = {"\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#
                "’": r"\textquoteright{}", "‘": r"\textquoteleft{}", "“": r"\textquotedblleft{}",
                "”": r"\textquotedblright{}", "—": r"\textemdash{}", "–": r"\textendash{}",
                "…": r"\ldots{}", "'": r"\textquotesingle{}", '"': r"\textquotedbl{}",
-               "<": r"\textless{}", ">": r"\textgreater{}", "|": r"\textbar{}", "\n": " "}
+               "<": r"\textless{}", ">": r"\textgreater{}", "|": r"\textbar{}", "`": r"\textasciigrave{}",
+               "-": r"{-}", "\n": " "}
 
 
 def tex(s):
@@ -27,6 +28,24 @@ def tex(s):
 
 def pct(x, d=1):
     return f"{100 * x:.{d}f}"
+
+
+def signed(x, d=1):
+    """Signed number with a typographic minus sign, e.g. +0.9 or -1.1."""
+    text = f"{x:+.{d}f}"
+    return text.replace("-", "$-$") if text.startswith("-") else text
+
+
+# Characters that look alike in a typewriter font are labelled in the n-gram table.
+NGRAM_LABELS = {"\u201c": r"\textquotedblleft{} (curly)", "\u201d": r"\textquotedblright{} (curly)",
+                "\u2019": r"\textquoteright{} (curly)", "\u2018": r"\textquoteleft{} (curly)",
+                "\u2014": r"\textemdash{} (em dash)", "\u2013": r"\textendash{} (en dash)",
+                "'": r"\texttt{\textquotesingle} (straight)", '"': r"\texttt{\textquotedbl} (straight)"}
+
+
+def ngram_tex(ngram):
+    parts = [NGRAM_LABELS.get(t, r"\texttt{" + tex(t) + "}") for t in ngram.split(" ")]
+    return r"\fbox{" + " ".join(parts) + "}"
 
 
 def num(name, value):
@@ -167,17 +186,17 @@ def training_tables(cfg):
     rows = []
     for _, r in tune[tune["arch"] == "cnn"].iterrows():
         chosen = r["n_filters"] == best["cnn"]["n_filters"] and r["dropout"] == best["cnn"]["dropout"]
-        rows.append(["CNN", f"{int(r['n_filters'])} filters per kernel size, dropout {r['dropout']:.1f}",
+        rows.append(["CNN", f"{int(r['n_filters'])} filters, dropout {r['dropout']:.1f}",
                      f"{int(r['n_params']):,}", pct(r["val_accuracy"]), pct(r["val_macro_f1"]),
                      int(r["best_epoch"]), f"{r['sec_per_epoch']:.1f}", r"\checkmark" if chosen else ""])
     rows.append(r"\midrule")
     for _, r in tune[tune["arch"] == "lstm"].iterrows():
         chosen = r["hidden"] == best["lstm"]["hidden"] and r["layers"] == best["lstm"]["layers"]
-        rows.append(["BiLSTM", f"hidden size {int(r['hidden'])}, {int(r['layers'])} layer(s)",
+        rows.append(["BiLSTM", f"hidden {int(r['hidden'])}, {int(r['layers'])} layer{'s' if r['layers'] > 1 else ''}",
                      f"{int(r['n_params']):,}", pct(r["val_accuracy"]), pct(r["val_macro_f1"]),
                      int(r["best_epoch"]), f"{r['sec_per_epoch']:.1f}", r"\checkmark" if chosen else ""])
     tabular("tab_tuning.tex", "llrrrrrc",
-            ["Model", "Configuration", "Parameters", "Val acc.", "Val macro-F1", "Best epoch", "s/epoch", "Chosen"],
+            ["Model", "Configuration", "Parameters", "Val acc.", "Val F1", "Best epoch", "s/epoch", "Chosen"],
             rows)
 
     seed = cfg["seed"]
@@ -232,6 +251,7 @@ def training_tables(cfg):
 
     # total training time of all saved neural runs
     total = 0.0
+    baseline_total = 0.0
     n_runs = 0
     for path in RESULTS.rglob("*.json"):
         if path.parent.name == "timing":
@@ -243,8 +263,12 @@ def training_tables(cfg):
         if isinstance(r, dict) and "train_time_sec" in r:
             total += r["train_time_sec"]
             n_runs += 1
+            if r.get("arch") == "tfidf_lr":
+                baseline_total += r["train_time_sec"]
     num("TotalTrainMinutes", f"{total / 60:.0f}")
     num("TotalRuns", n_runs)
+    num("TotalBaselineMinutes", f"{baseline_total / 60:.0f}")
+    num("TotalNeuralMinutes", f"{(total - baseline_total) / 60:.0f}")
 
 
 # ------------------------------------------------------------------------------------------------
@@ -312,7 +336,7 @@ def rq1_tables(cfg):
     num("ErrTokensLstmCorrect", f"{es['mean_tokens_lstm_correct']:.0f}")
     num("ErrTokensLstmWrong", f"{es['mean_tokens_lstm_wrong']:.0f}")
     ex = pd.read_csv(RESULTS / "rq1" / "error_examples.csv")
-    rows = [[r["true"], r["predicted"], r"\textit{" + tex(r["prompt"]) + r"} " + tex(r["snippet"]) + r"\ldots"]
+    rows = [[r["true"], r["predicted"], r"\textit{" + tex(r["prompt"]) + r"} " + tex(r["snippet"][:110].rsplit(" ", 1)[0]) + r"\ldots"]
             for _, r in ex.iterrows()]
     tabular("tab_errors.tex", r"llp{0.68\linewidth}", ["True", "Predicted", "Prompt (italic) and start of the response"],
             rows)
@@ -324,7 +348,7 @@ def rq1_tables(cfg):
 # ------------------------------------------------------------------------------------------------
 def rq2_tables(cfg):
     s = pd.read_csv(RESULTS / "rq2" / "summary.csv")
-    cond = {"input": "Input only", "input_ascii": "Input only, ASCII prompt", "output": "Output only",
+    cond = {"input": "Input only", "input_ascii": "Input only (ASCII)", "output": "Output only",
             "input+output": "Input + output"}
     chance = pct(1 / len(cfg["models"]))
     rows = []
@@ -358,7 +382,7 @@ def rq2_tables(cfg):
         num(f"RqTwo{tag}NotSharedQwenCorrect", b[arch]["not_shared_correct_by_true_model"].get("Qwen", 0))
     for arch, tag in (("cnn", "Cnn"), ("lstm", "Lstm"), ("tfidf_lr", "Base")):
         get = lambda c: s[(s["arch"] == arch) & (s["condition"] == c)]["test_accuracy"].iloc[0]  # noqa: E731
-        num(f"RqTwo{tag}BothMinusOut", f"{100 * (get('input+output') - get('output')):+.1f}")
+        num(f"RqTwo{tag}BothMinusOut", signed(100 * (get('input+output') - get('output'))))
 
 
 # ------------------------------------------------------------------------------------------------
@@ -371,8 +395,8 @@ def rq3_tables(cfg):
         for domain in ("definitional", "explanatory"):
             r = t[(t["arch"] == arch) & (t["test_domain"] == domain)].iloc[0]
             rows.append([ARCH_LABELS[arch], domain.capitalize(), int(r["n_test"]), pct(r["in_accuracy"]),
-                         pct(r["cross_accuracy"]), f"{100 * r['accuracy_drop']:+.1f}", pct(r["in_macro_f1"]),
-                         pct(r["cross_macro_f1"]), f"{100 * r['macro_f1_drop']:+.1f}"])
+                         pct(r["cross_accuracy"]), signed(100 * r['accuracy_drop']), pct(r["in_macro_f1"]),
+                         pct(r["cross_macro_f1"]), signed(100 * r['macro_f1_drop'])])
             tag = {"cnn": "Cnn", "lstm": "Lstm", "tfidf_lr": "Base"}[arch] + domain[:3].capitalize()
             num(f"RqThree{tag}In", pct(r["in_accuracy"]))
             num(f"RqThree{tag}Cross", pct(r["cross_accuracy"]))
@@ -386,7 +410,7 @@ def rq3_tables(cfg):
     for arch in ("cnn", "lstm"):
         for domain in ("definitional", "explanatory"):
             r = t[(t["arch"] == arch) & (t["test_domain"] == domain)].iloc[0]
-            rows.append([ARCH_LABELS[arch], domain.capitalize()] + [f"{100 * r[f'f1_drop_{m}']:+.1f}" for m in models])
+            rows.append([ARCH_LABELS[arch], domain.capitalize()] + [signed(100 * r[f"f1_drop_{m}"]) for m in models])
     tabular("tab_rq3_perclass.tex", "ll" + "r" * len(models), ["Model", "Test question type"] + models, rows)
 
     mean_drop = {m: t[t["arch"].isin(["cnn", "lstm"])][f"f1_drop_{m}"].mean() for m in models}
@@ -398,6 +422,15 @@ def rq3_tables(cfg):
     num("RqThreeSecondLeastStable", ranked[-2])
     num("RqThreeSecondLeastStableDrop", f"{100 * mean_drop[ranked[-2]]:.1f}")
     nn = t[t["arch"].isin(["cnn", "lstm"])]
+    class_drops = nn[[f"f1_drop_{m}" for m in models]].to_numpy()
+    num("RqThreeMaxClassDrop", f"{100 * class_drops.max():.1f}")
+    num("RqThreeMaxClassGain", f"{-100 * class_drops.min():.1f}")
+    easy = ["Claude", "Llama"]
+    num("RqThreeMinCrossClaudeLlama", pct(nn[[f"cross_f1_{m}" for m in easy]].to_numpy().min()))
+    num("RqThreeMaxCrossOthers", pct(nn[[f"cross_f1_{m}" for m in models if m not in easy]].to_numpy().max()))
+    num("RqThreeMaxDropAll", f"{100 * t['accuracy_drop'].max():.1f}")
+    num("RqThreeDefTestRows", f"{int(t[t['test_domain'] == 'definitional']['n_test'].iloc[0]):,}")
+    num("RqThreeExpTestRows", f"{int(t[t['test_domain'] == 'explanatory']['n_test'].iloc[0]):,}")
     num("RqThreeMeanDropNeural", f"{100 * nn['accuracy_drop'].mean():.1f}")
     num("RqThreeMaxDropNeural", f"{100 * nn['accuracy_drop'].max():.1f}")
     num("RqThreeMinDropNeural", f"{100 * nn['accuracy_drop'].min():.1f}")
@@ -432,9 +465,11 @@ def rq4_tables(cfg):
         only = g[(g["group"] == group) & (g["setting"] == "only")].iloc[0]
         without = g[(g["group"] == group) & (g["setting"] == "without")].iloc[0]
         rows.append([label, int(only["n_features"]), pct(only["test_accuracy"]), pct(without["test_accuracy"]),
-                     f"{100 * (fc['gradient_boosting']['test']['accuracy'] - without['test_accuracy']):+.1f}"])
+                     signed(100 * (fc['gradient_boosting']['test']['accuracy'] - without['test_accuracy']))])
         num(f"FeatOnly{group.capitalize()}", pct(only["test_accuracy"]))
         num(f"FeatWithout{group.capitalize()}", pct(without["test_accuracy"]))
+        num(f"FeatLoss{group.capitalize()}",
+            f"{100 * (fc['gradient_boosting']['test']['accuracy'] - without['test_accuracy']):.1f}")
     rows.append(r"\midrule")
     rows.append(["All features", fc["n_features"], pct(fc["gradient_boosting"]["test"]["accuracy"]), "--", "--"])
     tabular("tab_feature_groups.tex", "lrrrr",
@@ -442,7 +477,8 @@ def rq4_tables(cfg):
 
     imp = pd.read_csv(RESULTS / "rq4" / "feature_importance.csv")
     for k, word in enumerate(("One", "Two", "Three", "Four", "Five")):
-        num(f"FeatTop{word}", FEATURE_LABELS[imp.iloc[k]["feature"]].lower())
+        label = FEATURE_LABELS[imp.iloc[k]["feature"]]
+        num(f"FeatTop{word}", label if label.startswith("MATTR") else label[0].lower() + label[1:])
         num(f"FeatTop{word}Imp", pct(imp.iloc[k]["permutation_importance"]))
 
     means = pd.read_csv(RESULTS / "rq4" / "feature_means.csv", index_col=0)
@@ -456,24 +492,18 @@ def rq4_tables(cfg):
         num(f"EmDashRate{m}", f"{means.loc['em_dash_rate', m]:.2f}")
 
     ng = pd.read_csv(RESULTS / "rq4" / "distinctive_ngrams.csv", keep_default_na=False)
-    rows = []
-    for m in models:
-        top = ng[ng["model"] == m].head(8)
-        rows.append([m, ", ".join(r"\texttt{" + tex(w) + "}" for w in top["ngram"])])
-    tabular("tab_ngrams.tex", r"lp{0.82\linewidth}", ["Model", "Most over-represented n-grams (highest z-score first)"],
-            rows)
-
     closing = pd.read_csv(RESULTS / "rq4" / "closing_phrases.csv", keep_default_na=False)
     opening = pd.read_csv(RESULTS / "rq4" / "opening_phrases.csv", keep_default_na=False)
     rows = []
     for m in models:
-        c = closing[closing["model"] == m].head(3)
-        o = opening[opening["model"] == m].head(2)
-        rows.append([m,
-                     "; ".join(f"{tex(p)} ({pct(s)}\\%)" for p, s in zip(o["phrase"], o["share"])),
-                     "; ".join(f"{tex(p)} ({pct(s)}\\%)" for p, s in zip(c["phrase"], c["share"]))])
-    tabular("tab_phrases.tex", r"lp{0.36\linewidth}p{0.46\linewidth}",
-            ["Model", "Most common first three words", "Most common first two words of the last sentence"], rows)
+        top = ng[ng["model"] == m].head(8)
+        c = closing[closing["model"] == m].head(1)
+        rows.append([m, " ".join(ngram_tex(w) for w in top["ngram"]),
+                     "; ".join(tex(p) + f" ({pct(sh)}" + r"\%)" for p, sh in zip(c["phrase"], c["share"]))])
+        num(f"CloseTop{m}Pct", pct(c["share"].iloc[0]))
+    tabular("tab_ngrams.tex", r"lp{0.60\linewidth}p{0.22\linewidth}",
+            ["Model", "Most over-represented n-grams (highest z-score first)", "Last sentence starts with"], rows)
+    num("OpenMaxPct", pct(opening["share"].max()))
 
     # ablations
     a = pd.read_csv(RESULTS / "rq4" / "ablations.csv")
@@ -489,7 +519,7 @@ def rq4_tables(cfg):
                 row += ["--", "--"]
                 continue
             row += [pct(sub.loc[arch, "test_accuracy"]),
-                    "--" if v == "none" else f"{-100 * sub.loc[arch, 'accuracy_drop']:+.1f}"]
+                    "--" if v == "none" else signed(-100 * sub.loc[arch, 'accuracy_drop'])]
             if v != "none":
                 tag = {"cnn": "Cnn", "lstm": "Lstm", "tfidf_lr": "Base"}[arch]
                 vtag = "".join(w.capitalize() for w in v.replace("64", "SixtyFour").replace("128", "OneTwentyEight")
@@ -503,6 +533,8 @@ def rq4_tables(cfg):
         rows.append(row)
         if v == "none":
             rows.append(r"\midrule")
+    small = a[a["variant"].isin(["strip_markdown", "normalize_whitespace", "mask_self_id", "normalize_typography"])]
+    num("AblSmallMaxAbs", f"{100 * small['accuracy_drop'].abs().max():.1f}")
     lines = [r"\begin{tabular}{lr" + "rr" * len(archs) + "}", r"\toprule",
              " & Responses & " + " & ".join(rf"\multicolumn{{2}}{{c}}{{{ARCH_LABELS[x]}}}" for x in archs) + r" \\",
              "".join(rf"\cmidrule(lr){{{3 + 2 * i}-{4 + 2 * i}}}" for i in range(len(archs))),

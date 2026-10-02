@@ -1,0 +1,7 @@
+model,rows,exact_string_not_shared_by_all_six,exact_string_unique_to_this_model,contains_non_ascii,contains_curly_apostrophe,contains_garbled_apostrophe
+ChatGPT,3000,94,9,71,4,55
+Gemini,2992,86,1,70,1,64
+Claude,3000,94,0,71,1,65
+Llama,2999,82,4,71,1,62
+DeepSeek,2997,91,0,71,1,65
+Qwen,3000,94,65,71,64,2

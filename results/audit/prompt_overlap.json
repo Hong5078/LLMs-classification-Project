@@ -1,0 +1,19 @@
+{
+  "unique_prompts_raw": 3082,
+  "unique_prompt_groups": 3000,
+  "groups_by_number_of_models": {
+    "1": 1,
+    "5": 25,
+    "6": 2974
+  },
+  "share_of_groups_with_all_six": 0.9913333333333333,
+  "share_of_rows_in_groups_with_all_six": 0.9929953302201467,
+  "repeated_model_group_pairs": 18,
+  "groups_per_split": {
+    "test": 450,
+    "train": 2100,
+    "val": 450
+  },
+  "groups_shared_between_splits": 0,
+  "exact_strings_shared_by_all_six": 2906
+}

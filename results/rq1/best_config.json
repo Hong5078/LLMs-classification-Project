@@ -1,0 +1,18 @@
+{
+  "cnn": {
+    "emb_dim": 200,
+    "kernel_sizes": [
+      3,
+      4,
+      5
+    ],
+    "n_filters": 256,
+    "dropout": 0.3
+  },
+  "lstm": {
+    "emb_dim": 200,
+    "hidden": 256,
+    "layers": 2,
+    "dropout": 0.5
+  }
+}

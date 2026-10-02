@@ -1,0 +1,84 @@
+{
+  "n_test": 2699,
+  "cnn_errors": 361,
+  "lstm_errors": 450,
+  "both_wrong": 216,
+  "both_wrong_same_prediction": 144,
+  "either_wrong": 595,
+  "mean_tokens_cnn_correct": 304.1300256629598,
+  "mean_tokens_cnn_wrong": 274.7202216066482,
+  "mean_tokens_lstm_correct": 304.9088483770565,
+  "mean_tokens_lstm_wrong": 276.64444444444445,
+  "cnn_error_rate_by_true_model": {
+    "ChatGPT": 0.12666666666666668,
+    "Claude": 0.03333333333333333,
+    "DeepSeek": 0.22048997772828507,
+    "Gemini": 0.16481069042316257,
+    "Llama": 0.013303769401330377,
+    "Qwen": 0.24444444444444444
+  },
+  "lstm_error_rate_by_true_model": {
+    "ChatGPT": 0.39111111111111113,
+    "Claude": 0.04888888888888889,
+    "DeepSeek": 0.20489977728285078,
+    "Gemini": 0.12472160356347439,
+    "Llama": 0.011086474501108648,
+    "Qwen": 0.22
+  },
+  "cnn_error_rate_by_qtype": {
+    "definitional": 0.13730439172135286,
+    "explanatory": 0.11774744027303755,
+    "mixed": 0.15079365079365079,
+    "other": 0.16666666666666666
+  },
+  "lstm_error_rate_by_qtype": {
+    "definitional": 0.1746592629984856,
+    "explanatory": 0.13993174061433447,
+    "mixed": 0.15873015873015872,
+    "other": 0.3333333333333333
+  },
+  "top_pairs": [
+    {
+      "true": "ChatGPT",
+      "predicted": "Qwen",
+      "cnn_errors": 21,
+      "lstm_errors": 68,
+      "total": 89
+    },
+    {
+      "true": "Qwen",
+      "predicted": "DeepSeek",
+      "cnn_errors": 31,
+      "lstm_errors": 47,
+      "total": 78
+    },
+    {
+      "true": "Qwen",
+      "predicted": "ChatGPT",
+      "cnn_errors": 58,
+      "lstm_errors": 17,
+      "total": 75
+    },
+    {
+      "true": "DeepSeek",
+      "predicted": "Gemini",
+      "cnn_errors": 20,
+      "lstm_errors": 52,
+      "total": 72
+    },
+    {
+      "true": "ChatGPT",
+      "predicted": "Gemini",
+      "cnn_errors": 7,
+      "lstm_errors": 49,
+      "total": 56
+    },
+    {
+      "true": "DeepSeek",
+      "predicted": "ChatGPT",
+      "cnn_errors": 40,
+      "lstm_errors": 11,
+      "total": 51
+    }
+  ]
+}

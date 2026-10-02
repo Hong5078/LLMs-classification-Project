@@ -1,15 +1,16 @@
-\documentclass[11pt]{article}
+\documentclass[10pt]{article}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
 \usepackage{textcomp}
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=0.9in]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{amsmath,amssymb}
 \usepackage[font=small,labelfont=bf]{caption}
 \usepackage{microtype}
+\usepackage[compact]{titlesec}
 \usepackage[hidelinks]{hyperref}
 
 \graphicspath{{../figures/}}
@@ -18,15 +19,28 @@
 % Replace with the repository URL after the repository is created on GitHub.
 \newcommand{\repourl}{\texttt{[repository URL to be added]}}
 
-\setlength{\parskip}{3pt}
-\renewcommand{\arraystretch}{1.08}
+\setlength{\parskip}{2pt}
+\renewcommand{\arraystretch}{1.05}
+% Keep floats close to the text that refers to them and avoid half-empty float pages.
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.85}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+\setlength{\textfloatsep}{9pt plus 2pt minus 2pt}
+\setlength{\floatsep}{7pt plus 2pt minus 2pt}
+\setlength{\intextsep}{7pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{3pt}
 
 \title{\vspace{-1.2cm}Who Wrote It? Identifying LLMs from Their Responses}
 \author{CMPSC 448 Course Project\\[4pt]
 Team leader: Hongyu Guo\\
 Team members: Hongyu Guo (individual project)\\
 GitHub: \repourl}
-\date{October 2026}
+\date{\vspace{-0.6cm}}
 
 \begin{document}
 \maketitle
@@ -38,8 +52,7 @@ Using six model families from the public TXD-22 dataset (ChatGPT, Gemini, Claude
 a bidirectional LSTM from scratch. From the response alone the CNN reaches \RqOneCnnAcc\% test accuracy and the
 BiLSTM \RqOneLstmAcc\% (chance is \ChancePct\%), and a TF-IDF logistic regression reaches \BaselineAcc\%.
 The prompt carries no information in this dataset because every model answered the same questions.
-We also test transfer across question types, describe the stylometric differences between the models, and
-retrain the classifiers after removing punctuation, typography, length and other cues to see which signals matter.
+We also test transfer across question types and examine which signals the classifiers rely on.
 \end{abstract}
 
 % ====================================================================================================
@@ -52,10 +65,6 @@ RQ1 asks how well a CNN and an RNN identify the model from the response alone.
 RQ2 asks whether the user's prompt helps, by comparing input-only, output-only and input+output classifiers.
 RQ3 asks whether a classifier trained on one kind of question still works on another kind.
 RQ4 asks what the classifiers rely on, using stylometric features, distinctive n-grams and ablations.
-
-Sections~\ref{sec:data} and~\ref{sec:models} describe the data and the models. Section~\ref{sec:results}
-reports RQ1 and RQ2, Section~\ref{sec:analysis} covers RQ3, RQ4 and an error analysis, and
-Section~\ref{sec:lessons} discusses what we learned and the limits of the study.
 
 % ====================================================================================================
 \section{Problem Definition and Dataset Curation}
@@ -88,11 +97,10 @@ We kept the six classes named in our project plan: ChatGPT, Gemini, Claude, Llam
 from six different developers (OpenAI, Google, Anthropic, Meta, DeepSeek and Alibaba), so the requirement of at
 least three LLM families is met with room to spare. Each of the six appears in the file under exactly one
 \texttt{Source} label, so no label mapping or merging was needed. We excluded the human-written and
-mixed-authorship classes because they are not LLMs, and we excluded the other eleven AI classes to keep the
-problem focused: several of them are products that can serve answers from more than one underlying model
-(for example Poe and Perplexity), which makes the label less clearly a single model family, and Gemma shares a
-developer with Gemini. The filter is applied before anything else, so the other classes never influence the
-vocabulary, the split or the models.
+mixed-authorship classes because they are not LLMs. We excluded the other eleven AI classes to keep the
+problem focused: several are products that can serve answers from more than one underlying model (for example
+Poe and Perplexity), and Gemma shares a developer with Gemini. The filter is applied first, so the other
+classes never influence the vocabulary, the split or the models.
 
 \subsection{Data audit}
 
@@ -101,9 +109,9 @@ model. There are no missing or empty responses. One Llama response is the spread
 \texttt{\#NAME?}, and \RemovedDupResponses{} responses are exact copies of another response from the same model.
 No response text is shared between two different models.
 
-\begin{table}[t]
+\begin{table}[!htb]
 \centering\small
-\caption{The six-model subset. ``Removed'' counts rows dropped by cleaning. Words are whitespace-separated;
+\caption{The six-model subset. ``Removed'' counts rows dropped by cleaning. Words are runs of letters;
 tokens are counted with our tokenizer (Section~\ref{sec:models}). Mean, median and 99th percentile are per response.}
 \label{tab:dataset}
 \input{generated/tab_dataset.tex}
@@ -114,9 +122,9 @@ tokens are counted with our tokenizer (Section~\ref{sec:models}). Mean, median a
 model: \ShortestModel{} is the shortest on average (\ShortestModelTokens{} tokens) and \LongestModel{} the longest
 (\LongestModelTokens{}). Length is therefore a possible cue, which we test in Section~\ref{sec:ablations}.
 
-\begin{figure}[t]
+\begin{figure}[!htb]
 \centering
-\includegraphics[width=0.82\linewidth]{length_distribution.pdf}
+\includegraphics[width=0.55\linewidth]{length_distribution.pdf}
 \caption{Response length in tokens for each model. Boxes show the interquartile range with the median, whiskers
 the 1st to 99th percentile, and dots the remaining responses. The vertical line is the maximum sequence length
 used by the neural models.}
@@ -155,10 +163,9 @@ cleaning the dataset authors describe. What does differ strongly is typography. 
 responses, but in almost none from Claude, Llama or Gemini, and em dashes follow a similar pattern. We cannot
 tell from the data whether this reflects the models themselves or the way each model's answers were copied into
 the file, so we treat it as a possible collection artefact and test its effect with a dedicated ablation.
-A related practical point is that the CSV is encoded in Windows-1252, not UTF-8; reading it as UTF-8 fails, and
-reading it as Latin-1 turns curly quotes into control characters.
+A related practical point is that the CSV is encoded in Windows-1252, not UTF-8.
 
-\begin{table}[t]
+\begin{table}[!htb]
 \centering\small
 \caption{Audit of possible shortcuts: share of each model's responses (\%) that contain the given pattern.}
 \label{tab:audit}
@@ -202,7 +209,7 @@ vocabulary map to the unknown token.
 
 Responses are truncated to \MaxLen{} tokens. This covers \CoverageMaxLen\% of training responses completely,
 compared with \CoverageThreeEightFour\% at 384 tokens and \CoverageTwoFiveSix\% at 256, so truncation affects
-only the rare very long answers. Batches are padded to the longest sequence in the batch.
+only the rare very long answers.
 
 \subsection{Convolutional network}
 
@@ -218,7 +225,7 @@ anywhere in the response.
 \subsection{Bidirectional LSTM}
 
 The recurrent model is a bidirectional LSTM~\cite{hochreiter1997}. It uses the same kind of
-\EmbDim-dimensional learned embedding, followed by dropout and \LstmLayers{} bidirectional LSTM layer(s) with
+\EmbDim-dimensional learned embedding, followed by dropout and a bidirectional LSTM with \LstmLayers{} stacked layers and
 hidden size \LstmHidden{} per direction. Sequences are packed so that padding positions are not processed. The
 LSTM outputs (\LstmOutDim{} dimensions per token) are summarised by max-pooling and mean-pooling over the real
 tokens, and the two pooled vectors are concatenated into \LstmFeatureDim{} dimensions, passed through dropout
@@ -237,18 +244,20 @@ for \Patience{} epochs or after \MaxEpochs{} epochs. Regularisation comes from d
 stopping. Python, NumPy and PyTorch random seeds are fixed and cuDNN is set to deterministic mode.
 
 \paragraph{Compute budget.} All experiments ran on one laptop GPU (\Device{}). Following our plan, we first
-timed one epoch of each model at \MaxLen{} tokens: \TimingCnnSec{} seconds for the CNN and \TimingLstmSec{}
-seconds for the BiLSTM. Even if every required run used all \MaxEpochs{} epochs, the total would be about
-\WorstCaseMinutes{} minutes, within our \BudgetHours-hour budget, so we kept the maximum length at \MaxLen{}.
-In the end the \TotalRuns{} training runs in this report took \TotalTrainMinutes{} minutes of training time in
-total.
+timed one epoch of each model in its default configuration at \MaxLen{} tokens (\TimingCnnSec{} seconds for
+the CNN, \TimingLstmSec{} for the BiLSTM). Even if every required network run used all \MaxEpochs{} epochs,
+the total would be about \WorstCaseMinutes{} minutes, well within our \BudgetHours-hour budget, so we kept the
+maximum length at \MaxLen{}. That estimate left out the TF-IDF baselines and the optional BiLSTM ablations, and
+tuning then selected a two-layer BiLSTM that is slower per epoch. In the end the \TotalRuns{} training runs
+behind this report took \TotalTrainMinutes{} minutes in total: \TotalNeuralMinutes{} for the networks and
+\TotalBaselineMinutes{} for the baselines.
 
 \paragraph{Hyperparameter tuning.} We tuned a small grid for each model on the validation set with seed 42:
 the number of filters and the dropout rate for the CNN, and the hidden size and number of layers for the BiLSTM
 (Table~\ref{tab:tuning}). The configuration with the highest validation macro-F1 was used for all later
 experiments. The test set was not used during tuning.
 
-\begin{table}[t]
+\begin{table}[!htb]
 \centering\small
 \caption{Validation results of the tuning grid (seed 42, output-only). The chosen configurations are marked.}
 \label{tab:tuning}
@@ -259,6 +268,445 @@ experiments. The test set was not used during tuning.
 character 2--5-grams (case-sensitive, sublinear term frequency, \BaselineFeatures{} features). Its regularisation
 strength was chosen on the validation set ($C=\BaselineC$).
 
-%%RESULTS%%
+% ====================================================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{RQ1: identifying the model from its response}
+
+Table~\ref{tab:rq1} reports test results for the output-only classifiers, averaged over \NumSeeds{} random
+seeds. The CNN reaches \RqOneCnnAcc{} $\pm$ \RqOneCnnAccStd\% accuracy and the BiLSTM \RqOneLstmAcc{} $\pm$
+\RqOneLstmAccStd\%, against a chance level of \ChancePct\%. So the answer to RQ1 is yes: on questions never seen
+in training, both networks name the correct model out of six for most responses.
+The CNN is about three points more accurate than the BiLSTM, which is roughly twice the BiLSTM's
+seed-to-seed standard deviation. With only \NumSeeds{} seeds we treat this as a likely but not certain
+advantage. The CNN is also much cheaper: the seed-42 run took \CnnTrainSeconds{} seconds, against
+\LstmTrainSeconds{} seconds for the BiLSTM.
+
+\begin{table}[!htb]
+\centering\small
+\caption{RQ1, output-only classification on the test set (\TestRows{} responses). CNN and BiLSTM rows are the
+mean $\pm$ standard deviation over \NumSeeds{} seeds; the last six columns are per-class F1 (\%).}
+\label{tab:rq1}
+\input{generated/tab_rq1.tex}
+\end{table}
+
+The TF-IDF logistic regression is clearly better than both networks, at \BaselineAcc\% accuracy. We think there
+are two reasons. First, the networks are trained from scratch on only \TrainRows{} examples and overfit:
+Figure~\ref{fig:curves} shows the training loss still falling while the validation loss stops improving after the
+first few epochs, and at the selected epoch the CNN has \CnnFinalTrainAcc\% training accuracy but
+\CnnFinalValAcc\% validation accuracy. Second, as Section~\ref{sec:analysis} shows, much of the signal is in the
+frequency of particular punctuation marks, characters and words, which is exactly what a regularised linear
+model on character and word n-gram counts measures directly.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.58\linewidth]{training_curves.pdf}
+\caption{Training curves of the seed-42 RQ1 models. The vertical line marks the epoch with the best validation
+macro-F1, whose weights are used for testing.}
+\label{fig:curves}
+\end{figure}
+
+\paragraph{Easiest and hardest models.} The per-class F1 scores in Table~\ref{tab:rq1} split the models into
+two groups. Claude and Llama are the easiest to identify for both networks (for the CNN the two highest F1
+scores are \RqOneCnnEasiest{} at \RqOneCnnEasiestFone\% and \RqOneCnnSecondEasiest{} at
+\RqOneCnnSecondEasiestFone\%). ChatGPT and Qwen are the hardest (\RqOneCnnHardest{} at \RqOneCnnHardestFone\%
+and \RqOneCnnSecondHardest{} at \RqOneCnnSecondHardestFone\% for the CNN; \RqOneLstmHardest{} at
+\RqOneLstmHardestFone\% and \RqOneLstmSecondHardest{} at \RqOneLstmSecondHardestFone\% for the BiLSTM).
+DeepSeek is almost as hard as these two, and Gemini is in between. The baseline shows the same ordering at a
+higher level.
+
+\paragraph{Confusions.} Figure~\ref{fig:confusion} shows the row-normalised confusion matrices. Each row is a
+true model and each cell is the share of that model's test responses assigned to the column's model, so the
+diagonal is per-class recall. The largest off-diagonal cells for the CNN are \RqOneCnnConfOneTrue{} predicted
+as \RqOneCnnConfOnePred{} (\RqOneCnnConfOnePct\%) and \RqOneCnnConfTwoTrue{} as \RqOneCnnConfTwoPred{}
+(\RqOneCnnConfTwoPct\%); for the BiLSTM they are \RqOneLstmConfOneTrue{} as \RqOneLstmConfOnePred{}
+(\RqOneLstmConfOnePct\%) and \RqOneLstmConfTwoTrue{} as \RqOneLstmConfTwoPred{} (\RqOneLstmConfTwoPct\%).
+Almost all confusion is among ChatGPT, Qwen, DeepSeek and Gemini, and ChatGPT and Qwen are confused with each
+other in both directions.
+
+The stylometric profiles in Section~\ref{sec:stylometry} suggest why. Claude and Llama each have an unusual
+profile: Claude writes by far the longest sentences (\WordsPerSentenceClaude{} words per sentence on average,
+against \WordsPerSentenceQwen{} for Qwen), and Llama writes the shortest answers with the lowest lexical
+diversity. ChatGPT and Qwen, in contrast, have similar sentence lengths, similar answer lengths and the same
+curly-quote typography, so there is less to separate them.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.60\linewidth]{confusion_rq1.pdf}
+\caption{Row-normalised confusion matrices on the test set for RQ1, averaged over \NumSeeds{} seeds. Rows are
+true models and columns are predictions; the diagonal is per-class recall.}
+\label{fig:confusion}
+\end{figure}
+
+\subsection{RQ2: does the prompt help?}
+
+We trained each model on the prompt alone, on the response alone, and on both. For the combined input we
+concatenate \texttt{[INP] prompt [OUT] response}, with the prompt truncated to \PromptInConcat{} tokens (the
+longest prompt has \PromptTokensMax{} tokens, so nothing is cut in practice) and the response to \MaxLen{}
+tokens as before. Table~\ref{tab:rq2} gives the results.
+
+\begin{table}[!htb]
+\centering\small
+\caption{RQ2, test accuracy and macro-F1 (\%) by input condition (seed 42). ``ASCII'' removes
+non-ASCII characters and apostrophes from the prompt before training.}
+\label{tab:rq2}
+\input{generated/tab_rq2.tex}
+\end{table}
+
+\paragraph{Can the model be predicted from the prompt alone?} Essentially no. Input-only accuracy is
+\RqTwoCnnInAcc\% for the CNN, \RqTwoLstmInAcc\% for the BiLSTM and \RqTwoBaseInAcc\% for the baseline, close to
+the \ChancePct\% chance level. This is what the prompt-overlap audit predicts: every model was asked the same
+questions, so an identical prompt appears once with each of the six labels, and whatever a classifier predicts
+for it can be right for only one of them.
+
+\paragraph{When could input-only work, and why?} The audit found one place where the prompts are not identical:
+questions with an apostrophe are stored with a different character encoding in Qwen's rows. This is exactly the
+kind of artefact that would let an input-only classifier succeed, so we measured it. We split the test rows
+into those whose exact prompt string is shared by all six models (\RqTwoSharedN{} rows) and the rest
+(\RqTwoNotSharedN{} rows, \RqTwoNotSharedQwen{} of them from Qwen). On the shared prompts accuracy is
+\RqTwoCnnSharedAcc\% for the CNN, \RqTwoLstmSharedAcc\% for the BiLSTM and \RqTwoBaseSharedAcc\% for the
+baseline, which is chance. On the non-shared prompts the baseline labels \RqTwoBaseNotSharedQwenCorrect{} of the
+\RqTwoNotSharedQwen{} Qwen rows correctly and the CNN \RqTwoCnnNotSharedQwenCorrect{}, and their accuracy on
+these rows is \RqTwoBaseNotSharedAcc\% and \RqTwoCnnNotSharedAcc\%; the BiLSTM did not learn the cue
+(\RqTwoLstmNotSharedAcc\%). So two of the three classifiers did learn that a prompt with a real curly apostrophe
+is a Qwen row. Because only \RqTwoNotSharedN{} test rows are affected, this moves the overall accuracy by a
+fraction of a point. When we delete non-ASCII characters and apostrophes from the prompts and retrain, the cue
+is gone (\RqTwoCnnInAsciiAcc\%, \RqTwoLstmInAsciiAcc\% and \RqTwoBaseInAsciiAcc\%).
+
+This small case illustrates the general answer. If input-only classification works well, the classifier is
+reading how the dataset was put together (different prompt sources, templates, topics, languages or encodings
+for each model), not anything about the models. TXD-22 is close to a controlled experiment in this respect, so
+the effect is tiny. In a dataset where each model's conversations came from different users, it could be
+large, and it would inflate input+output results without being noticed.
+
+\paragraph{Does adding the prompt to the response help?} No. Compared with output-only, input+output changes
+accuracy by \RqTwoCnnBothMinusOut{} points for the CNN, \RqTwoLstmBothMinusOut{} for the BiLSTM and
+\RqTwoBaseBothMinusOut{} for the baseline. The signs differ, and for the networks the changes are of the same
+size as the seed-to-seed standard deviation in Table~\ref{tab:rq1} (\RqOneCnnAccStd{} and \RqOneLstmAccStd{}
+points), so we read them as noise. The prompt adds about \PromptTokensMean{} tokens that are the same for every
+class.
+
+% ====================================================================================================
+\section{In-Depth Analyses}
+\label{sec:analysis}
+
+\subsection{RQ3: do fingerprints transfer across question types?}
+
+\paragraph{Defining domains.} Our plan for RQ3 was to train on some task types (for example coding, mathematics
+and factual questions) and test on another (writing). TXD-22 does not allow this. It has no task column, and
+all its prompts are short questions about academic subjects, with no coding exercises, calculations or creative
+writing. We therefore define the domain by the form of the question, using rules on the first word of the prompt (the
+full word lists are in \texttt{src/prepare.py}). A prompt is \emph{explanatory} if it starts with a word such
+as \emph{explain, how, describe, discuss, analyze, why} or \emph{compare}. It is \emph{definitional} if it
+starts with a word such as \emph{what, define, who, which, name} or \emph{state} and contains none of the
+explanatory words. Prompts that start like a definitional question but also contain an explanatory word
+(``What is NAT and how does it work?'') are labelled \emph{mixed} and the few remaining ones \emph{other};
+these two groups are left out of RQ3.
+Table~\ref{tab:qtype} gives the counts. Because every model answered the same questions, the counts are almost
+identical across models. We read a random sample of ten prompts per type; every prompt had the label the rules
+intend, but the sample also showed that ``definitional'' is broader than its name: it includes questions such as
+``What adaptations help birds fly?'' that ask for more than a definition. The two types differ in the form of the
+question, which is a weaker kind of domain shift than a change of task.
+
+\begin{table}[!htb]
+\centering\small
+\caption{Question types used as domains in RQ3: rows per model (left) and distinct prompt groups per split (right).}
+\label{tab:qtype}
+\input{generated/tab_qtype.tex}
+\end{table}
+
+\paragraph{Design.} We train on one question type and test on the other, in both directions. There are about
+2.7 times as many definitional prompts as explanatory ones, so we subsample the definitional training prompts to
+the number of explanatory training prompts. Both training sets then have about \RqThreeMatchedTrainRows{} rows,
+and a model trained on the other type is not disadvantaged by having less data. Early stopping uses validation
+rows of the training type only, so the target type is never seen before testing. Each trained model is evaluated
+on the test rows of its own type (in-domain) and of the other type (cross-domain). For each test set,
+Table~\ref{tab:rq3} compares the model trained on the same type with the model trained on the other type.
+
+\begin{table}[!htb]
+\centering\small
+\caption{RQ3. For each test set, accuracy and macro-F1 (\%) of a model trained on the same question type
+(``In'') and of a size-matched model trained on the other type (``Cross''). Drop is In minus Cross, in points.}
+\label{tab:rq3}
+\input{generated/tab_rq3.tex}
+\end{table}
+
+\paragraph{Results.} Performance barely decreases on the unseen question type. For the two networks the
+accuracy drop is between \RqThreeMinDropNeural{} and \RqThreeMaxDropNeural{} points, and for all three models it
+is at most \RqThreeMaxDropAll{} points. These drops are the same size as the seed-to-seed variation we measured
+in RQ1, so we cannot distinguish them from zero. Table~\ref{tab:rq3class} gives the change in per-class F1. The changes
+for individual models go in both directions (from a drop of \RqThreeMaxClassDrop{} points to a gain of
+\RqThreeMaxClassGain{} points) with no consistent pattern, which is what noise would look like. The ranking of
+the models is stable: Claude and Llama have a cross-domain F1 of at least \RqThreeMinCrossClaudeLlama\% in all
+four network settings, and no other model exceeds \RqThreeMaxCrossOthers\%. So the same two models are the most
+consistently identifiable in both domains.
+
+We conclude that, within this dataset, the classifiers learn a fingerprint that does not depend on the form of
+the question. This fits the other analyses below, which show that the signal lies in general style (word
+choice, sentence length, punctuation) and not in content. The conclusion is limited by how close our two
+domains are: both are single-paragraph answers to academic questions, written under the same instructions. A
+change to code or to creative writing could well produce a much larger drop, and this dataset cannot test that.
+The table also shows that the amount of data matters more than the question type: training the CNN on all
+\RqThreeFullTrainRows{} definitional rows instead of the subsample raises its accuracy on explanatory test
+questions from \RqThreeCnnExpCross\% to \RqThreeCnnFullCross\%.
+
+\begin{table}[!htb]
+\centering\small
+\caption{RQ3, change in per-class F1 (points) when the model is trained on the other question type instead of
+the same type. Positive values are drops.}
+\label{tab:rq3class}
+\input{generated/tab_rq3_perclass.tex}
+\end{table}
+
+\subsection{RQ4: stylometric profiles}
+\label{sec:stylometry}
+
+To see what distinguishes the models, we computed \FeatCount{} stylometric features for every response, in
+five groups: \emph{length} (characters, words, sentences, words per sentence); \emph{lexical} (mean word
+length, type-token ratio, moving-average type-token ratio (MATTR) with a 50-word window~\cite{covington2010},
+pronoun rates, share of uppercase letters and of digits); \emph{punctuation} (rates per 100 words of commas,
+periods, semicolons, colons, question and exclamation marks, parentheses, hyphens and slashes);
+\emph{typography} (curly and straight apostrophes and quotes, en and em dashes, share of non-ASCII characters);
+and \emph{formatting} (markdown headers, bullets, numbered lists, bold, code and tables, LaTeX markers, emoji,
+newline density, and whether the response ends with terminal punctuation). MATTR is included because the plain
+type-token ratio falls as a text gets longer, so it partly measures length.
+
+Figure~\ref{fig:profiles} shows the mean of the most informative features for each model. Each model has a
+recognisable profile. Claude writes the longest answers (\WordsClaude{} words on average) in very long sentences
+(\WordsPerSentenceClaude{} words per sentence) with long words. Llama writes the shortest answers
+(\WordsLlama{} words) and has clearly the lowest lexical diversity (MATTR \MattrLlama{}, against \MattrDeepSeek{}
+for DeepSeek). DeepSeek uses the most parentheses (\ParenRateDeepSeek{} per 100 words, against \ParenRateLlama{}
+for Llama) and em dashes (\EmDashRateDeepSeek{} per 100 words). Gemini uses the most semicolons and colons, and
+Qwen the most commas. ChatGPT, DeepSeek and Qwen use curly apostrophes and the other three models do not.
+The formatting features are almost always zero because the responses contain almost no markdown.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.58\linewidth]{rq4_feature_profiles.pdf}
+\caption{Mean value of selected stylometric features for each model. Numbers are the means; colour is the
+z-score of the mean across the six models (blue below average, red above).}
+\label{fig:profiles}
+\end{figure}
+
+\paragraph{A classifier on the features alone.} We trained two classifiers on only these \FeatCount{} numbers,
+with the same split. Logistic regression reaches \FeatLrAcc\% test accuracy and gradient boosting
+(scikit-learn's histogram-based implementation with default settings) reaches \FeatGbAcc\%. So a few dozen
+hand-made style statistics, with no access to the words themselves, recover most of what the CNN achieves
+(\RqOneCnnAcc\%). By permutation importance on the validation set, the five most important features for the
+gradient-boosting model are the \FeatTopOne{} (shuffling it lowers accuracy by \FeatTopOneImp{} points),
+\FeatTopTwo{} (\FeatTopTwoImp), \FeatTopThree{} (\FeatTopThreeImp), \FeatTopFour{} (\FeatTopFourImp) and
+\FeatTopFive{} (\FeatTopFiveImp).
+
+Table~\ref{tab:groups} shows which kind of feature carries the signal. Each of the length, lexical and
+punctuation groups alone gives between \FeatOnlyLexical\% and \FeatOnlyLength\% accuracy, and typography alone
+gives \FeatOnlyTypography\%. Removing any one of these four groups costs only \FeatLossPunctuation{} to
+\FeatLossLexical{} points, because the others compensate. The formatting group alone is near chance
+(\FeatOnlyFormatting\%) and removing it changes nothing. The signal is therefore spread over several kinds of
+features, both structural (length, punctuation, typography) and lexical, and no single kind is necessary.
+
+\begin{table}[!htb]
+\centering\small
+\caption{Gradient boosting on stylometric features: test accuracy (\%) when using one feature group only, and
+when using all features except that group.}
+\label{tab:groups}
+\input{generated/tab_feature_groups.tex}
+\end{table}
+
+\paragraph{Distinctive n-grams and phrases.} Table~\ref{tab:ngrams} lists, for each model, the unigrams and
+bigrams that are most over-represented in its training responses compared with the other five models, ranked
+by the log-odds ratio with an informative Dirichlet prior~\cite{monroe2008}. Because all models answered the
+same questions, topic words cancel out and what remains is style. ChatGPT is marked by curly double quotes and
+by the word ``especially''. Gemini is marked by the dollar sign (it writes formulas in LaTeX), parentheses,
+colons and semicolons. Claude is marked by connecting words such as ``that'', ``through'', ``while'' and
+``including'' and by clauses introduced with ``, creating'', which matches its long sentences. Llama is marked
+by ``can'', ``used to'' and ``, such'' (as in ``such as''), a plainer explanatory style. DeepSeek is marked by
+parentheses, em dashes and ``e.g.'', and Qwen by commas, ``for example'' and ``fostering''.
+We also looked at how responses begin and end. Openings restate the topic of the question and are not
+distinctive: no three-word opening accounts for more than \OpenMaxPct\% of any model's responses. Closings
+are more telling (last column of Table~\ref{tab:ngrams}): \CloseTopChatGPTPct\% of ChatGPT responses end with
+a sentence starting ``In summary'', and \CloseTopLlamaPct\% of Llama responses with one starting ``By
+understanding''.
+
+\begin{table}[!htb]
+\centering\small
+\caption{Most distinctive n-grams per model (training split, lowercased; each box is one n-gram).
+Punctuation marks are tokens, so \texttt{. in} means a sentence that starts with ``In''. The last column gives
+the most common first two words of the final sentence, with the share of that model's responses.}
+\label{tab:ngrams}
+\input{generated/tab_ngrams.tex}
+\end{table}
+
+
+\subsection{RQ4: ablations}
+\label{sec:ablations}
+
+The feature analysis shows what differs between models. To test what the neural classifiers actually need, we
+modified the responses in the training, validation and test sets in the same way, retrained the output-only
+models from scratch, and measured the change in test accuracy (Table~\ref{tab:ablations}). All ablations use
+seed 42 and are compared with the seed-42 RQ1 model, so differences below roughly two points are within seed
+noise. The modifications are: (a) remove markdown syntax; (b) replace every run of whitespace, including
+newlines, with one space; (c) lowercase the text and delete all punctuation and symbols; (d) keep only the first
+64 or 128 tokens; (e) replace the names of the six model families and their developers with a placeholder; and
+(f), which we added after the audit, map curly quotes, long dashes and similar characters to plain ASCII.
+
+\begin{table}[!htb]
+\centering\small
+\caption{RQ4 ablations. Test accuracy (\%) after retraining on modified responses and the change from the
+unmodified model in points ($\Delta$). ``Responses changed'' is the share of responses that the modification
+alters.}
+\label{tab:ablations}
+\input{generated/tab_ablations.tex}
+\end{table}
+
+\paragraph{Formatting, whitespace and self-identification do not matter here.} Ablations (a), (b) and (e)
+change accuracy by at most \AblSmallMaxAbs{} points in either direction, which is noise. This is expected from
+the audit, because they alter only \AblStripMarkdownChanged\%, \AblNormalizeWhitespaceChanged\% and
+\AblMaskSelfIdChanged\% of the responses. The dataset simply does not contain these signals.
+
+\paragraph{Typography is not needed.} Ablation (f) changes \AblNormalizeTypographyChanged\% of the responses,
+yet accuracy stays within about one point of the unmodified models (CNN \AblCnnNormalizeTypographyAcc\%, BiLSTM
+\AblLstmNormalizeTypographyAcc\%, baseline \AblBaseNormalizeTypographyAcc\%). In the audit, curly apostrophes looked like a giveaway, and
+typography features alone do give \FeatOnlyTypography\% accuracy, but the classifiers do not depend on them:
+when they are removed, other cues carry the same information. This matters for the validity of the results,
+because typography was the cue most likely to come from the collection process instead of the models.
+
+\paragraph{Case and punctuation help moderately.} Ablation (c) removes every structural cue except length and
+leaves only a sequence of lowercase words. Accuracy falls by \AblCnnLowerNopunctDrop{} points for the CNN (to
+\AblCnnLowerNopunctAcc\%), \AblLstmLowerNopunctDrop{} points for the BiLSTM (to \AblLstmLowerNopunctAcc\%) and
+\AblBaseLowerNopunctDrop{} points for the baseline (to \AblBaseLowerNopunctAcc\%). Punctuation and case
+therefore contribute, but most of the performance survives on words alone.
+
+\paragraph{Truncation hurts most.} With only the first 128 tokens the CNN reaches
+\AblCnnTruncateOnetwentyeightAcc\%, and with the first 64 tokens \AblCnnTruncateSixtyfourAcc\%; the BiLSTM and
+the baseline behave the same way. Almost every response is longer than 64 tokens (only
+\ShorterThanSixtyFourPct\% are shorter), so at 64 tokens the length of the response is hidden from the
+classifier. However, truncation also removes about four fifths of the text, so this drop mixes two effects: the
+loss of the length cue and the loss of evidence. The feature analysis gives a rough idea of the first effect:
+length features alone give \FeatOnlyLength\% accuracy, but removing them from the full feature set costs only
+\FeatLossLength{} points. We therefore think most of the drop is lost evidence: the fingerprint is weak in any
+single sentence and accumulates over the response. Even the hardest condition, the first 64 lowercase words with
+no punctuation, gives \AblCnnLowerNopunctTruncateSixtyfourAcc\% for the CNN, more than three times chance.
+
+\paragraph{Structural, lexical, or both?} Both, with the lexical part larger. Word choice and phrasing alone
+give the CNN \AblCnnLowerNopunctAcc\% of its \RqOneCnnSeedAcc\% (seed 42), punctuation and case add about
+\AblCnnLowerNopunctDrop{} points, length is informative but largely redundant with the other cues, and
+formatting contributes nothing in this dataset because it was removed before release.
+
+\subsection{Error analysis}
+
+We compared the test errors of the seed-42 CNN and BiLSTM. The CNN misclassifies \ErrCnn{} of the \TestRows{}
+test responses and the BiLSTM \ErrLstm{}. They share \ErrBoth{} errors, and in \ErrBothSame{} of those they
+predict the same wrong model. The two architectures therefore fail on many of the same responses, but each also
+makes many errors the other does not, which suggests that combining them could help. Misclassified responses
+are shorter than correctly classified ones (\ErrTokensCnnWrong{} against \ErrTokensCnnCorrect{} tokens on average
+for the CNN, \ErrTokensLstmWrong{} against \ErrTokensLstmCorrect{} for the BiLSTM), consistent with the
+truncation result that less text means less evidence.
+
+Table~\ref{tab:errors} shows one example for each of the four most frequent confusions that both models made.
+The examples were selected by rule (the first such test row), not by hand. In the first one a Qwen response
+opens with a parenthetical remark, which is DeepSeek's most distinctive habit in Table~\ref{tab:ngrams}, and
+both networks label it DeepSeek. The other three open with a neutral definitional sentence that contains none of
+the markers from Table~\ref{tab:ngrams} and that any of the confused models could have written. This seems
+typical of the errors among ChatGPT, Qwen and DeepSeek: a response is misclassified when it happens to use
+another model's habit, or when it uses none of its own.
+
+\begin{table}[!htb]
+\centering\small
+\caption{Examples of test responses misclassified in the same way by both the CNN and the BiLSTM (seed 42).}
+\label{tab:errors}
+\input{generated/tab_errors.tex}
+\end{table}
+
+% ====================================================================================================
+\section{Lessons and Experience}
+\label{sec:lessons}
+
+\paragraph{What worked.} Auditing the data before modelling was the most useful step. It showed that all models
+answered the same questions, that the responses had no markdown, and that the file had encoding problems, and
+each of these changed the design: the split by prompt group, the choice of ablations, and the way we read the
+file. Training a simple baseline alongside the networks was also valuable, because it gave a reference that
+the networks did not beat. On the engineering side, saving every run's metrics to a file and generating all
+tables and numbers in this report from those files meant that rerunning the pipeline could not leave stale
+numbers in the text, and grouping training batches by length halved the BiLSTM's training time.
+
+\paragraph{What did not work, and surprises.} The first surprise was that both networks lost to TF-IDF with
+logistic regression (\RqOneCnnAcc\% and \RqOneLstmAcc\% against \BaselineAcc\%). With about twelve thousand
+training examples and randomly initialised embeddings, the networks overfit, and the task rewards exactly the
+frequency statistics a linear model captures. The second was that the BiLSTM was both slower (about seven times
+the CNN's training time) and less accurate than the CNN; a recurrent model's ability to follow long-range order
+did not pay off for a task that depends on local patterns. The third was typography: it looked like the
+strongest cue in the audit but removing it changed nothing, which taught us that a large difference in a
+marginal statistic does not show that a classifier relies on it; only an ablation does. Tuning was less
+informative than we hoped, since the differences between grid points in Table~\ref{tab:tuning} are of the same
+size as the differences between seeds.
+
+We also made a mistake that cost a full rerun. Our first grouping key treated a question stored with a curly
+apostrophe and the same question stored with a garbled apostrophe as two different prompts, so a few dozen
+questions ended up in different splits for Qwen and for the other models. We noticed it only because an
+input-only model scored slightly above chance, which should be impossible when every model gets the same
+prompts. After fixing the key and rebuilding the split, the input-only models are at chance, as
+Table~\ref{tab:rq2} shows. The lesson is to treat any result that is better than it should be as a sign of
+leakage and to check group identity on normalised text, not raw strings.
+
+\paragraph{Limitations.} The main limitation is the dataset. All results come from one collection with one
+prompt style (short academic questions), one answer format (a single paragraph of at most about 300 words) and
+formatting that was flattened before release. The dataset description does not state the model versions, the
+generation settings, or whether responses came from an API or a chat interface, and the responses date from
+early 2025. A classifier trained here identifies ``the way this model's answers look in TXD-22'', which may mix
+properties of the model with properties of how its answers were collected; the typography differences are an
+example, although the ablation shows our results do not depend on them. We do not know how well the classifiers
+would work on other prompts, other versions of the same models, or raw chat output with markdown. RQ3 tests only
+a mild shift (question form), because the data has no real task variety. Apart from RQ1, each experiment was run
+with one seed, so differences under about two points should not be interpreted. Our truncation ablation does not
+cleanly separate the length cue from the amount of evidence. Finally, the BiLSTM was sometimes still improving
+when it reached the \MaxEpochs-epoch limit, so it may be slightly undertrained.
+
+\paragraph{With more time.} We would (i) use pretrained representations, either pretrained word embeddings for
+the CNN and BiLSTM or a fine-tuned transformer, which we expect to close the gap to the baseline; (ii) run every
+experiment with several seeds and report confidence intervals; (iii) test on a different dataset with real task variety;
+(iv) collect our own responses with known model versions and the original markdown, to measure how much of the
+fingerprint is formatting; and (v) separate length from evidence by sampling fixed-length windows at random
+positions instead of always taking the start.
+
+% ====================================================================================================
+\section{Conclusion}
+
+On six model families from TXD-22, a classifier can identify which LLM wrote a response far better than chance:
+\RqOneCnnAcc\% for a CNN, \RqOneLstmAcc\% for a BiLSTM and \BaselineAcc\% for a TF-IDF logistic regression,
+tested on questions that were never seen in training. Claude and Llama are easy to recognise, while ChatGPT,
+Qwen and DeepSeek are often confused with each other. The prompt carries no information because all models
+were asked the same questions, and the one prompt cue we found came from an encoding artefact. The
+fingerprint transfers between definitional and explanatory questions with no measurable loss. It is mostly
+lexical (word choice and phrasing) with a smaller contribution from punctuation and case; it is spread over the
+whole response and gets stronger with length; and it does not depend on markdown, self-identification or
+typographic characters. These conclusions hold for this dataset; data with real task variety and known model versions is the next step.
+
+\paragraph{Use of AI tools.} As the project description permits, an LLM assistant (Claude) was used to write and
+debug the code and to draft this report, under the author's direction. All experiments were run on the author's
+machine, every number in the report is generated from the saved result files, and the author reviewed the code,
+results and text and is responsible for them.
+
+\begin{thebibliography}{9}\small\setlength{\itemsep}{1pt}
+
+\bibitem{txd22} M.~S.~Iqbal and M.~A.~Kashem. \emph{TXD-22: A Large-Scale Benchmark Dataset for Multi-Class
+AI-Generated and Mixed-Source Text Identification}. Mendeley Data, version 1, 2026.
+\url{https://doi.org/10.17632/prcjcggtjf.1}
+
+\bibitem{kim2014} Y.~Kim. Convolutional neural networks for sentence classification. In \emph{Proceedings of
+EMNLP}, pages 1746--1751, 2014.
+
+\bibitem{hochreiter1997} S.~Hochreiter and J.~Schmidhuber. Long short-term memory. \emph{Neural Computation},
+9(8):1735--1780, 1997.
+
+\bibitem{monroe2008} B.~L.~Monroe, M.~P.~Colaresi, and K.~M.~Quinn. Fightin' words: Lexical feature selection
+and evaluation for identifying the content of political conflict. \emph{Political Analysis}, 16(4):372--403, 2008.
+
+\bibitem{covington2010} M.~A.~Covington and J.~D.~McFall. Cutting the Gordian knot: The moving-average
+type-token ratio (MATTR). \emph{Journal of Quantitative Linguistics}, 17(2):94--100, 2010.
+
+\end{thebibliography}
+
+\end{document}
 
 \end{document}

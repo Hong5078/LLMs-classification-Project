@@ -1,0 +1,19 @@
+{
+  "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "budget_hours": 2.0,
+  "candidates": [
+    {
+      "max_len": 512,
+      "sec_per_epoch": {
+        "cnn": 4.78525447845459,
+        "lstm": 18.40931272506714
+      },
+      "worst_case_minutes": 62.77167248725891
+    }
+  ],
+  "max_len": 512,
+  "full_runs": {
+    "cnn": 14,
+    "lstm": 10
+  }
+}

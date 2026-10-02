@@ -1,0 +1,88 @@
+{
+  "rows_before": {
+    "ChatGPT": 3000,
+    "Claude": 3000,
+    "DeepSeek": 3000,
+    "Gemini": 3000,
+    "Llama": 3000,
+    "Qwen": 3000
+  },
+  "missing": {},
+  "empty": {},
+  "spreadsheet_error": {
+    "Llama": 1
+  },
+  "duplicate_rows": {},
+  "duplicate_responses_same_model": {
+    "DeepSeek": 3,
+    "Gemini": 8
+  },
+  "duplicate_responses_across_models": 0,
+  "rows_after": {
+    "ChatGPT": 3000,
+    "Claude": 3000,
+    "DeepSeek": 2997,
+    "Gemini": 2992,
+    "Llama": 2999,
+    "Qwen": 3000
+  },
+  "total_after": 17988,
+  "raw_file": "TXD-22 A Large-Scale Benchmark Dataset.csv",
+  "raw_rows": 66000,
+  "raw_sources": {
+    "AI-generated and AI-refined": 3000,
+    "AI-generated and AI-refined and Human-written": 3000,
+    "AI-generated and Human-written": 3000,
+    "BLACKBOXAI": 3000,
+    "ChatGPT": 3000,
+    "Claude": 3000,
+    "Copilot": 3000,
+    "DeepAI": 3000,
+    "DeepSeek": 3000,
+    "Gemini": 3000,
+    "Gemma": 3000,
+    "Grok": 3000,
+    "Human written": 3000,
+    "Human-written and AI-refined": 3000,
+    "Llama": 3000,
+    "Mistral AI": 3000,
+    "Nova": 3000,
+    "Perplexity": 3000,
+    "Pi": 3000,
+    "Poe": 3000,
+    "Qwen": 3000,
+    "Z.ai": 3000
+  },
+  "split_rows": {
+    "test": {
+      "ChatGPT": 450,
+      "Claude": 450,
+      "DeepSeek": 449,
+      "Gemini": 449,
+      "Llama": 451,
+      "Qwen": 450
+    },
+    "train": {
+      "ChatGPT": 2100,
+      "Claude": 2100,
+      "DeepSeek": 2098,
+      "Gemini": 2093,
+      "Llama": 2099,
+      "Qwen": 2100
+    },
+    "val": {
+      "ChatGPT": 450,
+      "Claude": 450,
+      "DeepSeek": 450,
+      "Gemini": 450,
+      "Llama": 449,
+      "Qwen": 450
+    }
+  },
+  "split_groups": {
+    "test": 450,
+    "train": 2100,
+    "val": 450
+  },
+  "n_groups": 3000
+}

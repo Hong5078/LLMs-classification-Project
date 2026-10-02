@@ -1,0 +1,82 @@
+{
+  "cnn": {
+    "n_shared": 2642,
+    "accuracy_shared": 0.16578349735049205,
+    "n_not_shared": 57,
+    "accuracy_not_shared": 0.2807017543859649,
+    "not_shared_by_true_model": {
+      "ChatGPT": 10,
+      "Claude": 10,
+      "DeepSeek": 9,
+      "Gemini": 9,
+      "Llama": 9,
+      "Qwen": 10
+    },
+    "not_shared_correct_by_true_model": {
+      "ChatGPT": 3,
+      "Claude": 3,
+      "Gemini": 1,
+      "Qwen": 9
+    },
+    "predicted_counts": {
+      "Qwen": 1646,
+      "Claude": 415,
+      "Gemini": 296,
+      "ChatGPT": 219,
+      "Llama": 123
+    }
+  },
+  "lstm": {
+    "n_shared": 2642,
+    "accuracy_shared": 0.16654049962149886,
+    "n_not_shared": 57,
+    "accuracy_not_shared": 0.17543859649122806,
+    "not_shared_by_true_model": {
+      "ChatGPT": 10,
+      "Claude": 10,
+      "DeepSeek": 9,
+      "Gemini": 9,
+      "Llama": 9,
+      "Qwen": 10
+    },
+    "not_shared_correct_by_true_model": {
+      "DeepSeek": 8,
+      "Qwen": 2
+    },
+    "predicted_counts": {
+      "DeepSeek": 2110,
+      "Claude": 252,
+      "ChatGPT": 157,
+      "Llama": 108,
+      "Qwen": 60,
+      "Gemini": 12
+    }
+  },
+  "tfidf_lr": {
+    "n_shared": 2642,
+    "accuracy_shared": 0.16654049962149886,
+    "n_not_shared": 57,
+    "accuracy_not_shared": 0.2982456140350877,
+    "not_shared_by_true_model": {
+      "ChatGPT": 10,
+      "Claude": 10,
+      "DeepSeek": 9,
+      "Gemini": 9,
+      "Llama": 9,
+      "Qwen": 10
+    },
+    "not_shared_correct_by_true_model": {
+      "Claude": 1,
+      "DeepSeek": 6,
+      "Qwen": 10
+    },
+    "predicted_counts": {
+      "Qwen": 1090,
+      "Llama": 775,
+      "ChatGPT": 379,
+      "Gemini": 282,
+      "DeepSeek": 132,
+      "Claude": 41
+    }
+  }
+}

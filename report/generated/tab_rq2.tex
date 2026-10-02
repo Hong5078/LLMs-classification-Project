@@ -1,0 +1,13 @@
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{Input only} & \multicolumn{2}{c}{Input only (ASCII)} & \multicolumn{2}{c}{Output only} & \multicolumn{2}{c}{Input + output} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Model & Acc. & F1 & Acc. & F1 & Acc. & F1 & Acc. & F1 \\
+\midrule
+CNN & 16.8 & 12.6 & 16.5 & 10.9 & 86.6 & 86.6 & 87.5 & 87.5 \\
+BiLSTM & 16.7 & 9.9 & 16.7 & 10.4 & 83.3 & 83.0 & 82.3 & 82.3 \\
+TF-IDF + LR & 16.9 & 14.0 & 16.7 & 13.9 & 92.5 & 92.4 & 92.6 & 92.6 \\
+\midrule
+Chance & 16.7 & -- & 16.7 & -- & 16.7 & -- & 16.7 & -- \\
+\bottomrule
+\end{tabular}
