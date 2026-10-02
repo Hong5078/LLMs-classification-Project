@@ -91,13 +91,14 @@ def fig_training_curves(cfg):
             ax.axvline(r["best_epoch"], color=AXIS, linewidth=1)
             if row == 0:
                 ax.set_title(ARCH_LABELS[arch])
-                ax.text(r["best_epoch"], ax.get_ylim()[1], " best epoch", color=MUTED, fontsize=7.5, va="top")
+                ax.text(r["best_epoch"], ax.get_ylim()[1], "best epoch ", color=MUTED, fontsize=7.5, va="top",
+                        ha="right")
             else:
                 ax.set_xlabel("Epoch")
             if col == 0:
                 ax.set_ylabel(ylabel)
             ax.set_xticks(h["epoch"])
-    axes[0, 0].legend(loc="upper right")
+    axes[1, 0].legend(loc="lower right")
     fig.tight_layout()
     save(fig, "training_curves")
 
@@ -130,9 +131,9 @@ def fig_confusion(cfg):
 
 def fig_rq2(cfg):
     s = pd.read_csv(RESULTS / "rq2" / "summary.csv")
-    conditions = ["input", "output", "input+output"]
-    labels = ["Input only", "Output only", "Input + output"]
-    fig, ax = plt.subplots(figsize=(6.2, 2.9))
+    conditions = ["input", "input_ascii", "output", "input+output"]
+    labels = ["Input only", "Input only\n(ASCII prompt)", "Output only", "Input + output"]
+    fig, ax = plt.subplots(figsize=(6.8, 3.0))
     width = 0.22
     for k, arch in enumerate(("cnn", "lstm", "tfidf_lr")):
         vals = [s[(s["arch"] == arch) & (s["condition"] == c)]["test_accuracy"].iloc[0] for c in conditions]

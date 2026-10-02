@@ -60,7 +60,7 @@ baseline:
   word_ngram: [1, 2]
   char_ngram: [2, 5]
   max_features: 200000
-  C_grid: [1.0, 10.0, 100.0]
+  C_grid: [1.0, 10.0, 100.0, 1000.0]
 
 budget_hours: 2.0
 

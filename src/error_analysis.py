@@ -24,10 +24,11 @@ def main():
     cnn_wrong, lstm_wrong = t["cnn"] != t["true"], t["lstm"] != t["true"]
     both_wrong = cnn_wrong & lstm_wrong
 
-    pairs = (t[cnn_wrong].groupby(["true", "cnn"]).size().rename("cnn_errors").to_frame()
-             .join(t[lstm_wrong].groupby(["true", "lstm"]).size().rename("lstm_errors"), how="outer")
-             .fillna(0).astype(int))
-    pairs.index.names = ["true", "predicted"]
+    def pair_counts(col, wrong):
+        return t[wrong].rename(columns={col: "predicted"}).groupby(["true", "predicted"]).size()
+
+    pairs = pd.DataFrame({"cnn_errors": pair_counts("cnn", cnn_wrong),
+                          "lstm_errors": pair_counts("lstm", lstm_wrong)}).fillna(0).astype(int)
     pairs["total"] = pairs.sum(axis=1)
     pairs = pairs.sort_values("total", ascending=False)
     pairs.to_csv(OUT / "error_pairs.csv")

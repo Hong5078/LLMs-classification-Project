@@ -2,6 +2,7 @@
 import time
 from pathlib import Path
 
+import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score
@@ -26,7 +27,8 @@ def chosen_C(cfg):
     return read_json(path)["C"] if path.exists() else cfg["baseline"]["C_grid"][0]
 
 
-def run_baseline(name, out_dir, cfg, data, class_names, extra_eval=None, tune_C=False, force=False, meta=None):
+def run_baseline(name, out_dir, cfg, data, class_names, extra_eval=None, tune_C=False, force=False, meta=None,
+                 save_preds=False):
     out_path = Path(out_dir) / f"{name}.json"
     if out_path.exists() and not force:
         return read_json(out_path)
@@ -54,7 +56,12 @@ def run_baseline(name, out_dir, cfg, data, class_names, extra_eval=None, tune_C=
     if meta:
         result.update(meta)
     for set_name, d in {"test": data["test"], **(extra_eval or {})}.items():
-        result[set_name] = compute_metrics(d["labels"], clf.predict(vec.transform(d["strings"])), class_names)
+        pred = clf.predict(vec.transform(d["strings"]))
+        result[set_name] = compute_metrics(d["labels"], pred, class_names)
+        if save_preds:
+            pd.DataFrame({"row_id": d["row_id"], "true": [class_names[i] for i in d["labels"]],
+                          "pred": [class_names[i] for i in pred]}).to_csv(
+                Path(out_dir) / f"{name}_{set_name}_preds.csv", index=False)
     result["train_time_sec"] = time.time() - start
     write_json(result, out_path)
     print(f"[{name}] C={C} val_f1={result['val']['macro_f1']:.4f} test_acc={result['test']['accuracy']:.4f} "

@@ -4,7 +4,6 @@ Usage: python -m src.prepare
 """
 import hashlib
 import re
-import unicodedata
 
 import pandas as pd
 from sklearn.model_selection import StratifiedGroupKFold
@@ -41,8 +40,13 @@ def load_raw(path):
 
 
 def prompt_key(prompt):
-    """Normalised prompt used only for grouping, so trivial variants of one question share a group."""
-    s = unicodedata.normalize("NFKC", str(prompt)).lower()
+    """Normalised prompt used only for grouping, so variants of one question share a group.
+
+    The same question is stored with different apostrophe encodings for different models
+    (a real curly apostrophe for some rows, a garbled multi-byte sequence for others), so all
+    non-ASCII characters and apostrophes are deleted before comparing.
+    """
+    s = str(prompt).encode("ascii", "ignore").decode().replace("'", "").lower()
     return re.sub(r"[^a-z0-9]+", " ", s).strip()
 
 

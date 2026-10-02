@@ -108,6 +108,19 @@ def main():
         "groups_per_split": df.groupby("split")["group"].nunique().to_dict(),
         "groups_shared_between_splits": int((df.groupby("group")["split"].nunique() > 1).sum()),
     }
+    # The same question is not always stored as the same string: apostrophes are encoded differently
+    # for different models. Count, per model, the prompts whose exact string the other models do not share.
+    n_exact = df.groupby("prompt")["model"].transform("nunique")
+    prompt_side = pd.DataFrame({
+        "rows": df.groupby("model").size(),
+        "exact_string_not_shared_by_all_six": (n_exact < len(models)).groupby(df["model"]).sum(),
+        "exact_string_unique_to_this_model": (n_exact == 1).groupby(df["model"]).sum(),
+        "contains_non_ascii": df["prompt"].str.contains(r"[^\x00-\x7f]").groupby(df["model"]).sum(),
+        "contains_curly_apostrophe": df["prompt"].str.contains("’").groupby(df["model"]).sum(),
+        "contains_garbled_apostrophe": df["prompt"].str.contains("â€").groupby(df["model"]).sum(),
+    }).loc[models]
+    prompt_side.to_csv(OUT / "prompt_encoding_by_model.csv")
+    overlap["exact_strings_shared_by_all_six"] = int((df.groupby("prompt")["model"].nunique() == len(models)).sum())
     write_json(overlap, OUT / "prompt_overlap.json")
 
     # ---- self-identification -------------------------------------------------------------
@@ -141,6 +154,7 @@ def main():
     print(length_stats[["n_tokens_mean", "n_tokens_50%", "n_tokens_99%", "n_tokens_max"]])
     print(pd.Series(length_summary["coverage_train"]))
     print(overlap)
+    print(prompt_side)
     print(self_id.round(4))
     print(typo.round(3))
     print(qtype)

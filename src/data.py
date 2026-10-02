@@ -6,7 +6,12 @@ from .config import ROOT
 from .tokenizer import INP, OUT, TOKEN_RE, tokenize
 from .transforms import TRANSFORMS
 
-CONDITIONS = ("input", "output", "input+output")
+CONDITIONS = ("input", "input_ascii", "output", "input+output")
+
+
+def ascii_prompt(prompt):
+    """Prompt with non-ASCII characters and apostrophes deleted, which removes per-model encoding differences."""
+    return prompt.encode("ascii", "ignore").decode().replace("'", "")
 
 
 def load_subset(cfg):
@@ -43,6 +48,8 @@ def build_inputs(df, cfg, condition="output", transform="none", out_len=None, tr
         return [tokenize(r) for r in responses], responses
 
     prompts = list(df["prompt"])
+    if condition == "input_ascii":
+        prompts, condition = [ascii_prompt(p) for p in prompts], "input"
     if condition == "input":
         n = cfg["lengths"]["input"]
         return [tokenize(p)[:n] for p in prompts], prompts

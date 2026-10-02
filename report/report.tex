@@ -1,0 +1,264 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{textcomp}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath,amssymb}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{../figures/}}
+\input{generated/numbers.tex}
+
+% Replace with the repository URL after the repository is created on GitHub.
+\newcommand{\repourl}{\texttt{[repository URL to be added]}}
+
+\setlength{\parskip}{3pt}
+\renewcommand{\arraystretch}{1.08}
+
+\title{\vspace{-1.2cm}Who Wrote It? Identifying LLMs from Their Responses}
+\author{CMPSC 448 Course Project\\[4pt]
+Team leader: Hongyu Guo\\
+Team members: Hongyu Guo (individual project)\\
+GitHub: \repourl}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent We study whether a classifier can tell which large language model (LLM) wrote a piece of text.
+Using six model families from the public TXD-22 dataset (ChatGPT, Gemini, Claude, Llama, DeepSeek and Qwen;
+\SubsetRows{} responses to the same set of about three thousand questions), we train a convolutional network and
+a bidirectional LSTM from scratch. From the response alone the CNN reaches \RqOneCnnAcc\% test accuracy and the
+BiLSTM \RqOneLstmAcc\% (chance is \ChancePct\%), and a TF-IDF logistic regression reaches \BaselineAcc\%.
+The prompt carries no information in this dataset because every model answered the same questions.
+We also test transfer across question types, describe the stylometric differences between the models, and
+retrain the classifiers after removing punctuation, typography, length and other cues to see which signals matter.
+\end{abstract}
+
+% ====================================================================================================
+\section{Introduction}
+
+Text written by LLMs is now common, and different models may leave different traces in what they write.
+This project asks whether those traces are strong enough for a neural network to name the model that produced a
+response. We treat it as a six-way text classification problem and answer four research questions.
+RQ1 asks how well a CNN and an RNN identify the model from the response alone.
+RQ2 asks whether the user's prompt helps, by comparing input-only, output-only and input+output classifiers.
+RQ3 asks whether a classifier trained on one kind of question still works on another kind.
+RQ4 asks what the classifiers rely on, using stylometric features, distinctive n-grams and ablations.
+
+Sections~\ref{sec:data} and~\ref{sec:models} describe the data and the models. Section~\ref{sec:results}
+reports RQ1 and RQ2, Section~\ref{sec:analysis} covers RQ3, RQ4 and an error analysis, and
+Section~\ref{sec:lessons} discusses what we learned and the limits of the study.
+
+% ====================================================================================================
+\section{Problem Definition and Dataset Curation}
+\label{sec:data}
+
+\subsection{Task}
+
+Each example is a triple (LLM name, LLM input, LLM output). The input is a question, the output is the model's
+answer, and the label is the model family. The main task (RQ1) is to predict the label from the output text.
+With six balanced classes, a classifier that guesses has an expected accuracy of \ChancePct\%.
+We report accuracy, macro-averaged F1, per-class F1 and a row-normalised confusion matrix for every experiment.
+
+\subsection{Data source and how it was collected}
+
+We use TXD-22, a public dataset released on Mendeley Data by Iqbal and Kashem under a CC BY 4.0
+licence~\cite{txd22}. We did not generate any text ourselves. According to the dataset description, the authors
+wrote a hierarchical set of questions covering 30 academic and professional subjects and sent the same questions
+to 17 AI systems between January and March 2025, asking for answers of at most about 300 words. They also
+collected human-written answers and four kinds of mixed human/AI text, and they report normalising Unicode and
+whitespace and removing duplicates. The released CSV file has \RawRows{} rows in \RawClasses{} classes of 3,000
+rows each, with three columns: \texttt{Question}, \texttt{Answer} and \texttt{Source}. These map directly to the
+required (LLM\_Input, LLM\_output, LLM\_name) triple. The description does not say which version of each model
+was used or whether answers came from an API or a chat interface, which limits what we can conclude
+(Section~\ref{sec:lessons}). The file contains only questions on academic subjects and model answers, so it has
+no private or sensitive information.
+
+\subsection{Selecting six models from the 22 classes}
+
+We kept the six classes named in our project plan: ChatGPT, Gemini, Claude, Llama, DeepSeek and Qwen. They come
+from six different developers (OpenAI, Google, Anthropic, Meta, DeepSeek and Alibaba), so the requirement of at
+least three LLM families is met with room to spare. Each of the six appears in the file under exactly one
+\texttt{Source} label, so no label mapping or merging was needed. We excluded the human-written and
+mixed-authorship classes because they are not LLMs, and we excluded the other eleven AI classes to keep the
+problem focused: several of them are products that can serve answers from more than one underlying model
+(for example Poe and Perplexity), which makes the label less clearly a single model family, and Gemma shares a
+developer with Gemini. The filter is applied before anything else, so the other classes never influence the
+vocabulary, the split or the models.
+
+\subsection{Data audit}
+
+Table~\ref{tab:dataset} summarises the subset. Before cleaning it has \SubsetRowsBefore{} rows, exactly 3,000 per
+model. There are no missing or empty responses. One Llama response is the spreadsheet error string
+\texttt{\#NAME?}, and \RemovedDupResponses{} responses are exact copies of another response from the same model.
+No response text is shared between two different models.
+
+\begin{table}[t]
+\centering\small
+\caption{The six-model subset. ``Removed'' counts rows dropped by cleaning. Words are whitespace-separated;
+tokens are counted with our tokenizer (Section~\ref{sec:models}). Mean, median and 99th percentile are per response.}
+\label{tab:dataset}
+\input{generated/tab_dataset.tex}
+\end{table}
+
+\paragraph{Length.} Figure~\ref{fig:lengths} shows the distribution of response length. The median response has
+\TokenMedianAll{} tokens and 99\% of responses have at most \TokenPNinetyNineAll{} tokens. Length differs by
+model: \ShortestModel{} is the shortest on average (\ShortestModelTokens{} tokens) and \LongestModel{} the longest
+(\LongestModelTokens{}). Length is therefore a possible cue, which we test in Section~\ref{sec:ablations}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{length_distribution.pdf}
+\caption{Response length in tokens for each model. Boxes show the interquartile range with the median, whiskers
+the 1st to 99th percentile, and dots the remaining responses. The vertical line is the maximum sequence length
+used by the neural models.}
+\label{fig:lengths}
+\end{figure}
+
+\paragraph{Prompt overlap.} This is the most important property of the dataset. The subset contains
+\PromptsRaw{} distinct question strings, which reduce to exactly \PromptGroups{} prompt groups after we ignore
+case, punctuation and non-ASCII characters. \GroupsAllSix{} of these groups (\GroupsAllSixPct\%) were answered by
+all six models, and they account for \RowsAllSixPct\% of the rows. In other words, the six classes were given
+the same prompts. This has two consequences. First, a random row-level split would put the same question in both
+the training and the test set, and a classifier could then be tested on topics it has already seen answered by
+every model. Second, the prompt should not be able to tell the models apart, which matters for RQ2.
+
+The audit also found one exception to ``the same prompts''. Questions that contain an apostrophe are stored
+differently for different models. In Qwen's rows \QwenCurlyPrompts{} prompts contain a real curly apostrophe,
+while the same questions in the other five models' rows contain a garbled three-character sequence left by an
+encoding error (between \OthersGarbledPromptsMin{} and \OthersGarbledPromptsMax{} prompts per model). As a result
+\QwenUniquePrompts{} prompt strings occur only with the label Qwen. This is a property of how the file was
+assembled, not of the models, and it is a small leak from the prompt to the label. It also means that grouping
+by the exact string would have treated these as different questions, which is why our grouping key drops
+non-ASCII characters. We return to this in RQ2.
+
+\paragraph{Trivial giveaways.} We searched every response for the names of the six model families and their
+developers and for phrases such as ``as an AI''. Table~\ref{tab:audit} shows that these are almost absent: at
+most \MaxOwnFamilyPct\% of a model's responses mention its own family and at most \MaxOwnDeveloperPct\% mention
+its own developer (Gemini responses that mention Google, a word the other models use at similar rates when the
+question is about technology). The models were asked subject questions and did not talk about themselves, so
+self-identification is not a shortcut here.
+
+\paragraph{Formatting and typography.} We expected markdown to be part of each model's fingerprint, but the
+responses are plain single paragraphs. At most \MaxNewlinePct\% of any model's responses contain a newline and
+at most \MaxBoldPct\% contain markdown bold (Table~\ref{tab:audit}), which is consistent with the whitespace
+cleaning the dataset authors describe. What does differ strongly is typography. Curly apostrophes appear in
+\CurlyAposChatGPT\% of ChatGPT responses, \CurlyAposDeepSeek\% of DeepSeek responses and \CurlyAposQwen\% of Qwen
+responses, but in almost none from Claude, Llama or Gemini, and em dashes follow a similar pattern. We cannot
+tell from the data whether this reflects the models themselves or the way each model's answers were copied into
+the file, so we treat it as a possible collection artefact and test its effect with a dedicated ablation.
+A related practical point is that the CSV is encoded in Windows-1252, not UTF-8; reading it as UTF-8 fails, and
+reading it as Latin-1 turns curly quotes into control characters.
+
+\begin{table}[t]
+\centering\small
+\caption{Audit of possible shortcuts: share of each model's responses (\%) that contain the given pattern.}
+\label{tab:audit}
+\input{generated/tab_audit.tex}
+\end{table}
+
+\subsection{Cleaning}
+
+We cleaned as little as possible. We removed the one spreadsheet-error row and the \RemovedDupResponses{}
+duplicate responses, \RemovedRows{} rows in total, leaving \SubsetRows{} rows. We did not lowercase the text or
+remove punctuation, newlines or symbols, because these may be part of what distinguishes the models. The classes
+remain balanced to within eight rows.
+
+\subsection{Splits and leakage}
+
+We split the data 70/15/15 into training, validation and test sets with seed 42. Because the same prompts
+repeat across models, we split by prompt group instead of by row: all answers to one question go to the same
+split. We used scikit-learn's \texttt{StratifiedGroupKFold} with 20 folds (14 folds for training, 3 for
+validation, 3 for testing), which keeps the class proportions equal while keeping groups together. The result is
+\TrainRows{} training, \ValRows{} validation and \TestRows{} test rows from \TrainGroups{}, \ValGroups{} and
+\TestGroups{} prompt groups, and \GroupsSharedBetweenSplits{} groups shared between splits. The test set
+therefore measures whether the classifier recognises a model on questions it has never seen, not whether it
+remembers how each model answered a particular question. The split assignment is saved to a file and reused by
+every experiment. All tuning used the validation set, and each final model was evaluated on the test set once.
+
+% ====================================================================================================
+\section{Models and Training}
+\label{sec:models}
+
+\subsection{Tokenization and vocabulary}
+
+We use a word-level tokenizer defined by one regular expression. It emits, in order of priority, a newline, a
+run of letters, a run of digits, or any other single non-space character. Case is kept and every punctuation
+mark or symbol is its own token, so \texttt{don't} becomes three tokens and a curly apostrophe is a different
+token from a straight one. We chose this over a lowercased word tokenizer because the audit showed that
+punctuation and typography differ between models, and over a subword tokenizer because it is simple, has no
+pretrained component, and makes the ablations easy to define. The vocabulary is built from the training split
+only: of \TypesSeen{} distinct token types we keep those that occur at least \MinFreq{} times, up to
+\MaxVocab{}, plus padding, unknown and a few special tokens, giving \VocabSize{} entries. Tokens outside the
+vocabulary map to the unknown token.
+
+Responses are truncated to \MaxLen{} tokens. This covers \CoverageMaxLen\% of training responses completely,
+compared with \CoverageThreeEightFour\% at 384 tokens and \CoverageTwoFiveSix\% at 256, so truncation affects
+only the rare very long answers. Batches are padded to the longest sequence in the batch.
+
+\subsection{Convolutional network}
+
+The CNN follows Kim~\cite{kim2014}. Token ids are mapped to \EmbDim-dimensional embeddings that are initialised
+randomly and learned with the rest of the network. Three one-dimensional convolutions with kernel sizes 3, 4
+and 5 and \CnnFilters{} filters each are applied in parallel to the embedded sequence. Each is followed by a
+ReLU and max-pooling over time, which gives one value per filter. The three pooled vectors are concatenated
+into a \CnnFeatureDim-dimensional vector, passed through dropout with rate \CnnDropout{}, and mapped to six
+logits by a linear layer. The model has \CnnParams{} parameters, most of them in the embedding table. The
+network reads the text as overlapping 3-, 4- and 5-token windows and keeps the strongest match for each filter
+anywhere in the response.
+
+\subsection{Bidirectional LSTM}
+
+The recurrent model is a bidirectional LSTM~\cite{hochreiter1997}. It uses the same kind of
+\EmbDim-dimensional learned embedding, followed by dropout and \LstmLayers{} bidirectional LSTM layer(s) with
+hidden size \LstmHidden{} per direction. Sequences are packed so that padding positions are not processed. The
+LSTM outputs (\LstmOutDim{} dimensions per token) are summarised by max-pooling and mean-pooling over the real
+tokens, and the two pooled vectors are concatenated into \LstmFeatureDim{} dimensions, passed through dropout
+(\LstmDropout{}), and mapped to six logits. The model has \LstmParams{} parameters. We pool over all time steps
+instead of using only the final hidden state because the responses are long (about 300 tokens) and evidence for
+a model can appear anywhere in the text.
+
+\subsection{Training procedure}
+
+Both networks are trained with the same procedure: cross-entropy loss, the AdamW optimiser with learning rate
+\LearningRate{} and weight decay \WeightDecay{}, and batches of \BatchSize{}. Gradients of the LSTM are clipped
+to a norm of \GradClip{}. Within each epoch the training examples are shuffled and then grouped into batches of
+similar length, which reduces padding and halved the LSTM's epoch time; batch order is random. After each epoch
+we compute macro-F1 on the validation set, keep the weights of the best epoch, and stop when it has not improved
+for \Patience{} epochs or after \MaxEpochs{} epochs. Regularisation comes from dropout, weight decay and early
+stopping. Python, NumPy and PyTorch random seeds are fixed and cuDNN is set to deterministic mode.
+
+\paragraph{Compute budget.} All experiments ran on one laptop GPU (\Device{}). Following our plan, we first
+timed one epoch of each model at \MaxLen{} tokens: \TimingCnnSec{} seconds for the CNN and \TimingLstmSec{}
+seconds for the BiLSTM. Even if every required run used all \MaxEpochs{} epochs, the total would be about
+\WorstCaseMinutes{} minutes, within our \BudgetHours-hour budget, so we kept the maximum length at \MaxLen{}.
+In the end the \TotalRuns{} training runs in this report took \TotalTrainMinutes{} minutes of training time in
+total.
+
+\paragraph{Hyperparameter tuning.} We tuned a small grid for each model on the validation set with seed 42:
+the number of filters and the dropout rate for the CNN, and the hidden size and number of layers for the BiLSTM
+(Table~\ref{tab:tuning}). The configuration with the highest validation macro-F1 was used for all later
+experiments. The test set was not used during tuning.
+
+\begin{table}[t]
+\centering\small
+\caption{Validation results of the tuning grid (seed 42, output-only). The chosen configurations are marked.}
+\label{tab:tuning}
+\input{generated/tab_tuning.tex}
+\end{table}
+
+\paragraph{Baseline.} As a reference we train a logistic regression on TF-IDF features of word 1--2-grams and
+character 2--5-grams (case-sensitive, sublinear term frequency, \BaselineFeatures{} features). Its regularisation
+strength was chosen on the validation set ($C=\BaselineC$).
+
+%%RESULTS%%
+
+\end{document}
