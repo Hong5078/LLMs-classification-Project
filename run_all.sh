@@ -20,6 +20,6 @@ $PY -m src.make_figures         # figures/
 $PY -m src.make_tables          # report/generated/ (LaTeX tables and number macros)
 
 cd report
-pdflatex -interaction=nonstopmode -halt-on-error report.tex > /dev/null
-pdflatex -interaction=nonstopmode -halt-on-error report.tex > /dev/null
-echo "report/report.pdf"
+pdflatex -jobname=report-revised -interaction=nonstopmode -halt-on-error report.tex > /dev/null
+pdflatex -jobname=report-revised -interaction=nonstopmode -halt-on-error report.tex > /dev/null
+echo "report/report-revised.pdf"

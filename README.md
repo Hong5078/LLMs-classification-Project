@@ -6,7 +6,8 @@ Given a response written by a large language model, predict which of six LLM fam
 (ChatGPT, Gemini, Claude, Llama, DeepSeek, Qwen). A Kim-style text CNN and a bidirectional LSTM are
 implemented in PyTorch and trained from scratch, with a TF-IDF + logistic regression model as a reference.
 
-The report is [report/report.pdf](report/report.pdf). Plain-language study notes are in [NOTES.md](NOTES.md).
+The current eight-page report is [report/report-revised.pdf](report/report-revised.pdf).
+The earlier twelve-page draft is retained as `report/report.pdf`. Plain-language study notes are in [NOTES.md](NOTES.md).
 
 ## Research questions
 
@@ -78,30 +79,26 @@ Finished training runs are cached as JSON in `results/`; delete a file (or the w
 | RQ4 ablations | `src.exp_rq4_ablations` | `results/rq4/ablations/`, `results/rq4/ablations.csv` |
 | Figures | `src.make_figures` | `figures/` |
 | Tables and numbers for the report | `src.make_tables` | `report/generated/` |
-| Report | `pdflatex report.tex` (twice, in `report/`) | `report/report.pdf` |
+| Report | `pdflatex -jobname=report-revised report.tex` (twice, in `report/`) | `report/report-revised.pdf` |
 
 ### Which file produces which table or figure
 
 | Report item | Source file(s) in `results/` | Drawn or formatted by |
 |---|---|---|
 | Table 1 (dataset) | `audit/cleaning_log.json`, `audit/length_stats.csv` | `make_tables.dataset_tables` |
-| Table 2 (audit of shortcuts) | `audit/self_identification.csv`, `audit/typography_rates.csv` | `make_tables.dataset_tables` |
-| Table 3 (tuning grid) | `tuning/tuning_summary.csv`, `rq1/best_config.json` | `make_tables.training_tables` |
-| Table 4 (RQ1) | `rq1/summary.csv`, `rq1/baseline_output.json` | `make_tables.rq1_tables` |
-| Table 5 (RQ2) | `rq2/summary.csv`, `rq2/input_only_breakdown.json` | `make_tables.rq2_tables` |
-| Table 6 (question types) | `audit/qtype_counts.csv`, `audit/qtype_prompts_per_split.csv` | `make_tables.dataset_tables` |
-| Tables 7-8 (RQ3) | `rq3/transfer.csv`, `rq3/runs.csv` | `make_tables.rq3_tables` |
-| Table 9 (feature groups) | `rq4/feature_groups.csv`, `rq4/feature_classifier.json` | `make_tables.rq4_tables` |
-| Table 10 (n-grams, closing phrases) | `rq4/distinctive_ngrams.csv`, `rq4/closing_phrases.csv` | `make_tables.rq4_tables` |
-| Table 11 (ablations) | `rq4/ablations.csv` | `make_tables.rq4_tables` |
-| Table 12 (error examples) | `rq1/error_examples.csv`, `rq1/error_stats.json` | `make_tables.rq1_tables` |
-| Figure 1 (response lengths) | `audit/lengths_per_row.csv` | `make_figures.fig_lengths` |
-| Figure 2 (training curves) | `rq1/cnn_seed42.json`, `rq1/lstm_seed42.json` | `make_figures.fig_training_curves` |
-| Figure 3 (confusion matrices) | `rq1/cnn_mean_confusion.json`, `rq1/lstm_mean_confusion.json` | `make_figures.fig_confusion` |
-| Figure 4 (stylometric profiles) | `rq4/feature_means.csv` | `make_figures.fig_feature_profiles` |
+| Table 2 (training settings) | Configuration values exported to `report/generated/numbers.tex` | `make_tables.training_tables`; layout in `report.tex` |
+| Table 3 (RQ1) | `rq1/summary.csv`, `rq1/baseline_output.json` | `make_tables.rq1_tables` |
+| Table 4 (RQ2) | `rq2/summary.csv` | `make_tables.rq2_tables` |
+| Table 5 (RQ3) | `rq3/transfer.csv` | `make_tables.rq3_tables` |
+| Table 6 (ablations) | `rq4/ablations.csv` | `make_tables.rq4_tables` |
+| Figure 1 (confusion matrices) | `rq1/cnn_mean_confusion.json`, `rq1/lstm_mean_confusion.json` | `make_figures.fig_confusion` |
+| Figure 2 (stylometric profiles) | `rq4/feature_means.csv` | `make_figures.fig_feature_profiles` |
 
-`figures/` also contains four figures that are not in the report: `rq2_conditions`, `rq3_transfer`,
-`rq4_feature_importance` and `rq4_ablations`. They show the same numbers as Tables 5, 7-8, 9 and 11.
+The full tuning grid, shortcut audit, question-type counts, per-class transfer results,
+feature-group results, n-gram rankings and error examples remain in `results/` and
+`report/generated/`. Additional figures, including training curves and length distributions,
+remain in `figures/`. The shorter report refers to these supporting files rather than
+repeating every table and plot.
 
 Every number in the report text is a LaTeX macro defined in `report/generated/numbers.tex`, which
 `src.make_tables` writes from the result files. No number is typed by hand.
@@ -120,6 +117,6 @@ run_all.sh             one command that reproduces everything
 
 ## Use of AI tools
 
-An LLM coding assistant (Claude) was used to write and debug the code and to draft the report, under the
+LLM assistants were used to write and debug the code, draft the report, and revise its presentation, under the
 author's direction, as the project description allows. All experiments were run locally and every reported number comes from the saved
 result files in `results/`.
