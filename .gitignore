@@ -34,3 +34,12 @@ report/*.blg
 report/*.fls
 report/*.fdb_latexmk
 report/*.synctex.gz
+
+# Local course materials, previous drafts, and preview files
+local/
+tmp/
+report/.build/
+
+# Previous PDFs that may remain open in a local viewer
+report/report-revised.pdf
+report/report-final.pdf

@@ -11,6 +11,7 @@
 \usepackage[font=small,labelfont=bf]{caption}
 \usepackage{microtype}
 \usepackage[compact]{titlesec}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.75em}{}
 \usepackage[hidelinks]{hyperref}
 
 \graphicspath{{../figures/}}
@@ -36,7 +37,8 @@
 \title{\vspace{-1.2cm}Who Wrote It? Identifying LLMs from Their Responses}
 \author{CMPSC 448 Course Project\\[4pt]
 Team leader: Hongyu Guo\\
-Team members: Hongyu Guo (individual project)}
+Team members: Hongyu Guo (individual project)\\[4pt]
+\small GitHub: \href{https://github.com/Hong5078/LLMs-classification-Project}{\texttt{Hong5078/LLMs-classification-Project}}}
 \date{\vspace{-0.6cm}}
 
 \begin{document}
@@ -55,17 +57,24 @@ are limited to this dataset and its collection process.
 
 \section{Introduction}
 Different LLMs may leave recognisable patterns in their word choice and response structure. We treat model
-identification as six-way classification and investigate four questions: \textbf{RQ1}, can a CNN and an RNN
-identify the model from its response? \textbf{RQ2}, does the user's prompt help? \textbf{RQ3}, does identification
-transfer across question types? \textbf{RQ4}, which linguistic or structural signals distinguish the models?
+identification as six-way classification and organise the experiments around four research questions:
+\begin{description}
+\setlength{\itemsep}{0pt}
+\setlength{\parskip}{0pt}
+\item[RQ1:] Can we identify which LLM generated a response?
+\item[RQ2:] Does the user's prompt help identify the LLM?
+\item[RQ3:] Do LLM fingerprints generalise across question types?
+\item[RQ4:] What characteristics distinguish different LLMs?
+\end{description}
 Our main finding is that the responses are distinguishable within TXD-22, but a simple baseline outperforms
 both neural networks. Audits and ablations help explain the signal and the limits of that finding.
 
 \section{Problem Definition and Dataset Curation}
 \label{sec:data}
-\subsection{Source, labels and cleaning}
+\subsection{Dataset introduction}
 Each example is a triple (LLM name, input prompt, output response). For RQ1 the classifier receives only the
-response and predicts its model-family label. We use TXD-22, released by Iqbal and Kashem on Mendeley Data
+response and predicts its model-family label. We use TXD-22 (A Large-Scale Benchmark Dataset for Multi-Class AI-Generated and Mixed-Source
+Text Identification), released by Iqbal and Kashem on Mendeley Data
 under CC BY 4.0~\cite{txd22}; we did not generate responses ourselves. According to the dataset description,
 the authors sent questions spanning 30 academic and professional subjects to 17 AI systems between January
 and March 2025, requesting answers of at most about 300 words. They also collected human and mixed-source
@@ -73,6 +82,7 @@ text and describe normalising Unicode and whitespace. The released CSV contains 
 \RawClasses{} classes, with columns \texttt{Question}, \texttt{Answer} and \texttt{Source}. Model versions,
 generation settings and API versus chat-interface access are undocumented.
 
+\subsection{Model-family selection and cleaning}
 We select ChatGPT, Gemini, Claude, Llama, DeepSeek and Qwen, six model-family labels from different developers.
 Human and mixed-authorship classes are excluded; restricting the study to these six also avoids labels for
 products that may serve multiple underlying models. Filtering occurs before vocabulary construction or
@@ -170,8 +180,12 @@ minutes on a \Device{}.
 ($C=\BaselineC$) is selected on validation data. This baseline tests whether frequency-based features
 are sufficient without learning a neural representation.
 
-\section{Results}
-\subsection{RQ1: identifying the model from its response}
+\section{Research Questions and Results}
+\subsection{RQ1: Can we identify which LLM generated a response?}
+\label{sec:rq1}
+\noindent\textbf{Main finding:} Both neural models identify responses well above chance; TF-IDF achieves
+ the highest accuracy at \BaselineAcc\%.
+
 Table~\ref{tab:rq1} shows that both networks substantially exceed chance on held-out prompt groups.
 The CNN achieves \RqOneCnnAcc{} $\pm$ \RqOneCnnAccStd\% accuracy and the BiLSTM
 \RqOneLstmAcc{} $\pm$ \RqOneLstmAccStd\%. The CNN has a higher average score and trains faster:
@@ -207,7 +221,11 @@ predictions, and each row sums to one. The diagonal gives per-class recall.}
 \label{fig:confusion}
 \end{figure}
 
-\subsection{RQ2: does the prompt help?}
+\subsection{RQ2: Does the user's prompt help identify the LLM?}
+\label{sec:rq2}
+\noindent\textbf{Main finding:} Prompt-only accuracy is near chance, and adding the prompt gives no
+consistent improvement in these runs.
+
 We compare prompt-only, response-only and combined inputs. Combined inputs concatenate
 \texttt{[INP] prompt [OUT] response}, allowing \PromptInConcat{} prompt tokens and \MaxLen{} response
 tokens; the longest prompt has only \PromptTokensMax{} tokens. All comparisons in
@@ -236,8 +254,11 @@ reflect dataset assembly rather than a property of the generating model.
 small differences should be interpreted cautiously; they do not establish that prompt context could never
 help under a different dataset design.
 
-\section{In-Depth Analyses}
-\subsection{RQ3: transfer across question types}
+\subsection{RQ3: Do LLM fingerprints generalise across question types?}
+\label{sec:rq3}
+\noindent\textbf{Main finding:} The observed neural accuracy drops are only \RqThreeMinDropNeural{}--\RqThreeMaxDropNeural{}
+percentage points under this limited question-form shift.
+
 TXD-22 has no task labels or clear coding, calculation and creative-writing subsets. We therefore test
 a narrower shift: \emph{definitional} prompts beginning with words such as ``what'' or ``define'', versus
 \emph{explanatory} prompts beginning with ``explain'', ``how'' or ``why''. Definitional openings that also
@@ -269,7 +290,11 @@ subjects and share the same collection instructions. Training-set size also matt
 \RqThreeCnnExpCross\% to \RqThreeCnnFullCross\%. Detailed per-class changes are saved in
 \texttt{results/rq3/transfer.csv}.
 
-\subsection{RQ4: characteristics and retraining ablations}
+\subsection{RQ4: What characteristics distinguish different LLMs?}
+\label{sec:rq4}
+\noindent\textbf{Main finding:} Aggregate style statistics are informative, and substantial accuracy survives
+punctuation removal; truncating responses produces larger drops.
+
 \label{sec:stylometry}
 We compute \FeatCount{} features in five groups: length, lexical diversity and related statistics,
 punctuation, typography, and formatting. Moving-average type-token ratio (MATTR) uses a fixed 50-word
@@ -344,7 +369,7 @@ answer about sockets as Qwen; the opening is a generic definition. These example
 but examining an opening alone cannot establish why the networks made the prediction. Complete examples
 and error summaries are saved in \texttt{results/rq1/}.
 
-\section{Lessons, Limitations and Next Steps}
+\section{Lessons and Limitations}
 \paragraph{Lessons and experience.} The data audit changed the evaluation design: repeated questions
 required grouped splitting, sparse markdown limited formatting analyses, and encoding differences required
 normalised group identity. An initial grouping key treated curly and garbled apostrophes as different
@@ -364,11 +389,6 @@ RQ3 tests only a mild shift and inherits settings selected using the broader val
 one seed, so small changes remain uncertain. Truncation confounds length with lost evidence, and some
 BiLSTM runs were still improving at the \MaxEpochs-epoch cap.
 
-\paragraph{Next steps.} First, compare pretrained representations with the current networks and baseline.
-Second, repeat key prompt and ablation comparisons across seeds to estimate uncertainty. Third, evaluate
-on genuinely different tasks with documented model versions, and use fixed-length windows to better
-control the amount of text available.
-
 \section{Conclusion}
 CNN and BiLSTM classifiers identify the six labels well above chance on held-out questions, while TF-IDF
 logistic regression gives the strongest performance. Prompt-only inputs are near chance and adding prompts
@@ -377,10 +397,7 @@ and retraining ablations reveal several overlapping cues, with substantial perfo
 removal and typography normalisation. These findings describe TXD-22; broader model attribution requires
 stronger task shifts and controlled collection conditions.
 
-\paragraph{Use of AI tools.} LLM assistants were used to help write and debug code, draft the report and
-revise its presentation under the author's direction. Experiments were run locally and reported numbers
-come from saved result files. The author is responsible for understanding, verifying and explaining the
-submitted work.
+\paragraph{Use of AI tools.} LLM assistants were used for this project.
 
 \begin{thebibliography}{9}\small\setlength{\itemsep}{1pt}
 

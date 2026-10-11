@@ -6,8 +6,13 @@ Given a response written by a large language model, predict which of six LLM fam
 (ChatGPT, Gemini, Claude, Llama, DeepSeek, Qwen). A Kim-style text CNN and a bidirectional LSTM are
 implemented in PyTorch and trained from scratch, with a TF-IDF + logistic regression model as a reference.
 
-The current eight-page report is [report/report-revised.pdf](report/report-revised.pdf).
-The earlier twelve-page draft is retained as `report/report.pdf`. Plain-language study notes are in [NOTES.md](NOTES.md).
+**[Read the project report](report/Project_Report.pdf)** (PDF, 8 pages).
+
+**GitHub repository:** [Hong5078/LLMs-classification-Project](https://github.com/Hong5078/LLMs-classification-Project)
+
+Start with the report for the project findings, [src/models.py](src/models.py) for the CNN and BiLSTM,
+and [docs/NOTES.md](docs/NOTES.md) for plain-language study notes. Saved metrics and supporting analyses
+are in [results/](results/).
 
 ## Research questions
 
@@ -79,7 +84,7 @@ Finished training runs are cached as JSON in `results/`; delete a file (or the w
 | RQ4 ablations | `src.exp_rq4_ablations` | `results/rq4/ablations/`, `results/rq4/ablations.csv` |
 | Figures | `src.make_figures` | `figures/` |
 | Tables and numbers for the report | `src.make_tables` | `report/generated/` |
-| Report | `pdflatex -jobname=report-revised report.tex` (twice, in `report/`) | `report/report-revised.pdf` |
+| Report | `pdflatex -jobname=Project_Report report.tex` (twice, in `report/`) | `report/Project_Report.pdf` |
 
 ### Which file produces which table or figure
 
@@ -105,18 +110,24 @@ Every number in the report text is a LaTeX macro defined in `report/generated/nu
 
 ## Repository layout
 
+```text
+README.md              project overview and submission report link
+report/Project_Report.pdf  submission report
+report/report.tex      editable LaTeX source
+report/generated/      tables and number macros generated from results
+src/                   model implementations and experiment scripts
+configs/default.yaml   hyperparameters and grids
+results/               saved metrics, training histories, and split assignments
+figures/               report and supporting figures (PDF and PNG)
+docs/NOTES.md          study notes and design explanations
+requirements.txt       Python dependencies
+run_all.sh             reproduction pipeline
 ```
-configs/default.yaml   all hyperparameters and grids
-src/                   data preparation, tokenizer, models, training, evaluation, experiments, figures, tables
-results/               metrics, training histories, confusion matrices, split assignment (JSON/CSV)
-figures/               figures used in the report (PDF and PNG)
-report/                report.tex, generated tables, report.pdf
-NOTES.md               study notes: design decisions and results in plain language
-run_all.sh             one command that reproduces everything
-```
+
+Downloaded data, the Python environment, course handouts, earlier report drafts, build logs,
+and temporary previews are kept locally and excluded from Git. Earlier drafts and course materials
+are under `local/`; downloaded archives are under `data/downloads/`.
 
 ## Use of AI tools
 
-LLM assistants were used to write and debug the code, draft the report, and revise its presentation, under the
-author's direction, as the project description allows. All experiments were run locally and every reported number comes from the saved
-result files in `results/`.
+LLM assistants were used for this project.
